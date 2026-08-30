@@ -109,26 +109,28 @@ This split is deliberate. Four different rails, four different detection mechani
                  ▼                                        │
         ┌─────────────────────────────┐                   │
         │ RED AGENT — two stages      │───────────────────┘
-        │  1. LLM reasons in words    │   next round
+        │  1. Codex reasons in words  │   next round
         │  2. CEM refines the numbers │
         └─────────────────────────────┘
 ```
 
 The red agent only ever sees **approve or decline** plus its own attack's performance — exactly like a real fraudster probing a live system. It never sees model internals or weights.
 
-### The red agent is an LLM, not just an optimiser
+### The red agent uses Codex as its LLM reasoner, not just an optimiser
 
 This is what makes our system genuinely *AI* red teaming rather than parameter tuning, so understand it properly.
 
-**Stage 1 — Reasoner (LLM).** After each round we hand a language model a **detector report**: which of our signals are working (per-feature AUC), what each attack parameter physically means, the current values, and a handful of caught-versus-missed examples. The LLM writes back, in plain English, *why* the detector is catching the attack and *what a real fraud operator would change* — then proposes concrete parameter moves.
+**Stage 1 — Reasoner (Codex).** After each round we hand Codex a **detector report**: which of our signals are working (per-feature AUC), what each attack parameter physically means, the current values, and a handful of caught-versus-missed examples. Codex writes back, in plain English, *why* the detector is catching the attack and *what a real fraud operator would change* — then proposes concrete parameter moves.
 
-**Stage 2 — Refiner (CEM).** Cross-entropy method search tunes the numbers inside the region the reasoner proposed. The LLM supplies the hypothesis; the optimiser finds the exact values.
+Codex runs locally through non-interactive `codex exec`, authenticated with the operator's ChatGPT subscription. We do **not** use OpenAI API keys or API credits. The Python loop sends the prompt on stdin, requests schema-constrained JSON, captures the final response, and caches it. OpenAI documents both [ChatGPT subscription sign-in for Codex](https://learn.chatgpt.com/docs/auth) and [`codex exec` for scripts](https://learn.chatgpt.com/docs/non-interactive-mode).
 
-Why both: an LLM alone gives plausible-sounding but unmeasured guesses. CEM alone gives numbers with no explanation — it will discover that `mule_age_days = 45` works, but it will never say *why*, and it can only search directions somebody already parameterised. Together you get reasoned, measured, explainable attack evolution.
+**Stage 2 — Refiner (CEM).** Cross-entropy method search tunes the numbers inside the region the reasoner proposed. Codex supplies the hypothesis; the optimiser finds the exact values.
+
+Why both: Codex alone can give plausible-sounding but unmeasured guesses. CEM alone gives numbers with no explanation — it will discover that `mule_age_days = 45` works, but it will never say *why*, and it can only search directions somebody already parameterised. Together you get reasoned, measured, explainable attack evolution.
 
 **The reasoning is a demo artifact.** Every round's output is saved to `results/round_{r}/redteam_reasoning.json` and gets its own dashboard screen. Judges watch the attacker explain its plan in English, then watch our detection collapse. That is far more compelling than a table of parameter deltas.
 
-**Framing note:** this is an authorised red-team simulation operating on fully synthetic data, and the LLM proposes bounded parameter values inside a pre-defined space. It is not generating attack tooling. Write the prompts that way, and say so if a judge asks.
+**Framing note:** this is an authorised red-team simulation operating on fully synthetic data, and Codex proposes bounded parameter values inside a pre-defined space. It is not generating attack tooling. Write the prompts that way, and say so if a judge asks.
 
 Two constraints keep it honest, and both must be stated in our pitch:
 
@@ -149,14 +151,14 @@ Two constraints keep it honest, and both must be stated in our pitch:
 | Novelty detection | scikit-learn IsolationForest | |
 | Semantic | `sentence-transformers`, `all-MiniLM-L6-v2` | Person B only |
 | Graph | NetworkX | Persons A and C |
-| Red agent — reasoner | LLM API (Claude or GPT), **cached** | proposes evasions in words |
+| Red agent — reasoner | Codex CLI via `codex exec`, ChatGPT-authenticated, **cached** | proposes evasions in words without API credits |
 | Red agent — refiner | Cross-Entropy Method, ~80 lines NumPy | no RL framework |
 | Dashboard | Streamlit + Plotly | |
-| LLM content | any API, **cached to JSON** | generated once, never live |
+| LLM content | Codex CLI, **cached to JSON** | generated once during precomputation, never during judging |
 
 **Explicitly skipped:** Kafka, GNNs, Docker, cloud deploy, RL frameworks. These earn zero marks and eat hours. The streaming architecture goes in the slides as a diagram, not in the repo.
 
-**Hard rule:** no LLM API call and no model training happens during the judging demo. Everything is precomputed to Parquet. The dashboard only replays.
+**Hard rule:** no Codex invocation and no model training happens during the judging demo. Everything is precomputed to Parquet/JSON. The dashboard only replays and requires no credentials or network access.
 
 ```bash
 pip install pandas numpy pyarrow duckdb lightgbm scikit-learn \
@@ -186,10 +188,11 @@ mc-redteam/
 │   ├── a3_card_testing/   # PERSON C
 │   └── a4_synth_identity/ # PERSON D
 ├── redteam/
-│   ├── llm_agent.py       # STAGE 1 — LLM reasoner
+│   ├── llm_agent.py       # STAGE 1 — Codex CLI reasoner adapter
+│   ├── proposal.schema.json # strict JSON schema passed to codex exec
 │   ├── prompts/
 │   │   └── evasion.txt    # system + user prompt template
-│   ├── report.py          # builds the detector report fed to the LLM
+│   ├── report.py          # builds the detector report fed to Codex
 │   ├── cem.py             # STAGE 2 — cross-entropy method refiner
 │   └── realism.py         # realism + utility budget
 ├── models/
@@ -200,7 +203,7 @@ mc-redteam/
 │   └── run_rounds.py      # orchestrator
 ├── app/
 │   └── dashboard.py       # Streamlit
-├── data/                  # reference dataset, cached LLM content
+├── data/                  # reference dataset, cached model-generated content
 ├── results/               # round outputs (parquet + json)
 └── tests/
     └── test_contract.py   # THE integration guarantee
@@ -288,7 +291,7 @@ class AttackGenerator(Protocol):
         Used by the utility budget. E.g. A3 = cards validated per hour, normalised."""
 
     def describe_state(self, params: dict) -> dict:
-        """Plain-English state, read by the LLM reasoner. Returns:
+        """Plain-English state, read by the Codex reasoner. Returns:
         {
           "attack_summary":  "one paragraph on how this attack works",
           "param_semantics": {param: "what it means physically, and what
@@ -296,7 +299,7 @@ class AttackGenerator(Protocol):
           "defender_signals": {feature: "what this feature measures"},
           "current_params":  params,
         }
-        The LLM cannot reason about `split_factor` unless you tell it that
+        Codex cannot reason about `split_factor` unless you tell it that
         split_factor means 'how many mule accounts the payout is divided across'.
         """
 
@@ -319,11 +322,11 @@ class DetectorHead(Protocol):
         """Returns float array in [0, 1], same length as X."""
 ```
 
-### 5.4 The LLM red agent contract — built in Phase 0
+### 5.4 The Codex red agent contract — built in Phase 0
 
 Stubbed in Phase 0, completed by Person A in Phase 3. Everyone needs to know its two touchpoints.
 
-**Touchpoint 1 — you must fill in `param_semantics` and `defender_signals` in your `card.json`.** The LLM reads these. Without them it is reasoning about meaningless variable names.
+**Touchpoint 1 — you must fill in `param_semantics` and `defender_signals` in your `card.json`.** Codex reads these. Without them it is reasoning about meaningless variable names.
 
 ```json
 "param_semantics": {
@@ -338,16 +341,31 @@ Stubbed in Phase 0, completed by Person A in Phase 3. Everyone needs to know its
 
 **Touchpoint 2 — implement `describe_state()`** as shown in the interface above. Ten minutes of work, and it is checked by the contract test.
 
+#### How Codex is invoked
+
+Before precomputing rounds, install the Codex CLI and run `codex login`, choosing ChatGPT sign-in. `codex exec` reuses that saved subscription authentication. Do not create or request an API key for this project.
+
+The adapter invokes Codex as a subprocess with argument-list APIs, never a shell string. Conceptually:
+
+```bash
+codex exec --ephemeral --sandbox read-only \
+  --output-schema redteam/proposal.schema.json -
+```
+
+The rendered detector report is supplied on stdin. Progress goes to stderr and the final schema-constrained JSON response is captured from stdout. `--ephemeral` avoids persisting a session rollout, and `--sandbox read-only` prevents the reasoner from modifying the repository. The adapter records the Codex CLI version and selected model with the cached exchange so results can be audited.
+
+This is a **precomputation dependency only**. A teammate without the authenticated Codex CLI can still run the numeric CEM fallback and replay committed/cached reasoning.
+
 #### What the loop does with it
 
 ```python
 report   = build_detector_report(attack, round_metrics, sample_events)
-proposal = llm_agent.propose(report)      # stage 1 — reasoning
+proposal = llm_agent.propose(report)      # stage 1 — codex exec + validated JSON
 params   = cem.refine(proposal, attack)   # stage 2 — numeric search
 params   = budgets.enforce(params, attack)
 ```
 
-`llm_agent.propose()` returns strict JSON:
+`llm_agent.propose()` returns strict JSON regardless of whether Codex or the fallback produced it:
 
 ```json
 {
@@ -366,9 +384,9 @@ params   = budgets.enforce(params, attack)
 #### Guardrails — non-negotiable, Person A implements
 
 1. Clamp every proposed value into `param_space`; silently drop unknown keys
-2. If JSON parsing fails, log it and **fall back to pure CEM** — the loop never breaks because an LLM returned prose
+2. If Codex is unavailable, exits non-zero, times out, or returns invalid JSON, log it and **fall back to pure CEM** — the loop never breaks because the reasoner failed
 3. Run realism and utility budgets on the result; reject and re-prompt up to 3 times
-4. **Cache the full exchange** to `results/round_{r}/redteam_reasoning.json`. The demo replays this file. No live API call during judging, ever.
+4. **Cache the full exchange** to `results/round_{r}/redteam_reasoning.json`, including runner/model metadata. The demo replays this file. No live Codex invocation during judging, ever.
 
 ### 5.5 The column prefix rule
 
@@ -435,7 +453,7 @@ results/round_{r}/events.parquet          # all attacks + legit for that round
 results/round_{r}/features.parquet
 results/round_{r}/scores.parquet
 results/round_{r}/metrics.json
-results/round_{r}/redteam_reasoning.json   # the LLM's written evasion plan
+results/round_{r}/redteam_reasoning.json   # Codex's written evasion plan
 ```
 
 `metrics.json` shape:
@@ -493,9 +511,9 @@ Write to `results/fidelity.json`. This screen goes *first* in the demo — estab
 ```bash
 python -m loop.run_rounds --rounds 0 1 2 --seed 42
 ```
-Round 0 uses `default_params()`. Rounds 1 and 2 run the **two-stage red agent**: the LLM reasoner reads each attack's detector report and writes an evasion plan, then CEM refines the numbers inside that region, subject to realism and utility budgets. Each person's round-1 replacement features are already in the codebase, so the recovery is real, not staged.
+Round 0 uses `default_params()`. Rounds 1 and 2 run the **two-stage red agent**: the ChatGPT-authenticated Codex reasoner reads each attack's detector report and writes an evasion plan, then CEM refines the numbers inside that region, subject to realism and utility budgets. Each person's round-1 replacement features are already in the codebase, so the recovery is real, not staged.
 
-Person A also finishes `redteam/llm_agent.py` (~3 hours): prompt template, strict JSON parsing, clamping, retry, CEM fallback, and caching to `redteam_reasoning.json`. Build the fallback path first — a working pure-CEM loop that you then upgrade is much safer than an LLM loop that might not parse at hour 40.
+Person A also finishes `redteam/llm_agent.py` (~3 hours): a safe `codex exec` subprocess adapter, JSON Schema output, timeout/error handling, clamping, retry, CEM fallback, and caching to `redteam_reasoning.json`. Build the fallback path first — a working pure-CEM loop that you then upgrade is much safer than a Codex-backed loop that might fail at hour 40. Do not add the OpenAI SDK or request an API key.
 
 ### Step 4 — Meta-learner *(owner: Person D)*
 Logistic regression stacking all detector heads plus the IsolationForest novelty score into one risk score. Report `fpr_at_recall_0.85` — how many honest customers we would block. A fraud system that annoys real people is useless, and judges know it.
@@ -508,7 +526,7 @@ Five screens, reading only precomputed Parquet:
 1. **Attack Library** — the four cards with their JSON params
 2. **Fidelity Proof** — distribution overlays, KS table, discriminator AUC
 3. **Live Arena** — pick attack, replay a round, watch scores stream
-4. **Red Agent Reasoning** — the LLM's evasion plan for each attack, in its own words, rendered from `redteam_reasoning.json`. Show it *next to* the recall drop it caused.
+4. **Red Agent Reasoning** — Codex's evasion plan for each attack, in its own words, rendered from `redteam_reasoning.json`. Show it *next to* the recall drop it caused.
 5. **Signal Mortality** — features × rounds, cells going red as AUC decays toward 0.5, replacement signals appearing below
 6. **Scoreboard** — recall curves, attacker cost frontier, LOAO results
 
@@ -522,7 +540,7 @@ Must include:
 
 **Where GenAI sits in our system** — have this answer ready, someone will ask:
 
-> "GenAI is the threat model in all four attacks — deepfake coercion, LLM-written prompt injection, agent-orchestrated carding, generated KYC documents. It also drives our red-teaming agent, which reasons in natural language about how to defeat our own detector. What we deliberately do *not* use it for is generating the transaction rows themselves, because parametric simulation gives us verifiable distributional fidelity and reproducibility that LLM-generated tabular data cannot. We use GenAI where it is the right tool, not where it is decorative."
+> "GenAI is the threat model in all four attacks — deepfake coercion, LLM-written prompt injection, agent-orchestrated carding, generated KYC documents. It also drives our red-teaming agent: Codex, invoked offline through the CLI with ChatGPT subscription access, reasons in natural language about how to defeat our own detector. What we deliberately do *not* use it for is generating the transaction rows themselves, because parametric simulation gives us verifiable distributional fidelity and reproducibility that LLM-generated tabular data cannot. We use GenAI where it is the right tool, not where it is decorative."
 
 ### The two caveats — state them yourselves before a judge does
 
@@ -558,6 +576,6 @@ Cut in this order:
 2. Person D's GRU (fall back to hand-engineered trajectory features)
 3. One entire attack
 
-**Do not cut the LLM reasoner.** If it is failing at hour 40, run it once by hand per attack, paste the output into `redteam_reasoning.json`, and let the loop read the cached file. The reasoning is real either way — you just ran it manually instead of in-loop. Say that plainly if asked; nobody penalises a cached call, and the screen is worth far more than the automation.
+**Do not cut the Codex reasoner.** If automated `codex exec` is failing at hour 40, run the same prompt once interactively in the authenticated Codex client for each attack, validate and paste the output into `redteam_reasoning.json`, and let the loop read the cached file. The reasoning is real either way — you just ran it manually instead of in-loop. Say that plainly if asked; nobody penalises a cached run, and the screen is worth far more than the automation.
 
 **Never cut the loop.** Two attacks with a complete, working loop beats four attacks with no loop. The loop is what is being judged.

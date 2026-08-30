@@ -3,7 +3,7 @@
 **Folder you own:** `attacks/a1_upi_mule/`
 **Feature prefix:** `a1_`
 **Branch:** `feat/a1`
-**Read `00_TEAM_BRIEF_AND_INTEGRATION.md` first.**
+**Read `00_TEAM_BRIEF_AND_INTEGRATION (1).md` first.**
 
 ---
 
@@ -129,7 +129,7 @@ meta = {
 }
 ```
 
-Implement `describe_state()` to return these two blocks plus a one-paragraph `attack_summary`. The LLM reasoner reads them. Without the semantics it is guessing about variable names, and its proposals will be useless.
+Implement `describe_state()` to return these two blocks plus a one-paragraph `attack_summary`. The Codex reasoner reads them. Without the semantics it is guessing about variable names, and its proposals will be useless.
 
 ### `utility()`
 
@@ -170,8 +170,8 @@ Detector: LightGBM on `a1_*` plus the core rolling features.
 
 The mutations below are **not hardcoded by you**. After round 0, our red agent runs in two stages:
 
-1. **An LLM reads your detector report** — your per-feature AUCs, your `param_semantics`, your current values, and a few caught-versus-missed examples — and writes an evasion plan in plain English.
-2. **CEM search** then tunes the exact numbers inside the region the LLM proposed.
+1. **Codex reads your detector report** through ChatGPT-authenticated `codex exec` — your per-feature AUCs, your `param_semantics`, your current values, and a few caught-versus-missed examples — and writes a schema-constrained evasion plan in plain English.
+2. **CEM search** then tunes the exact numbers inside the region Codex proposed.
 
 For your attack, the reasoner should produce something close to this. Save a real example — it goes on the dashboard:
 
@@ -203,7 +203,7 @@ For your attack, the reasoner should produce something close to this. Save a rea
 
 Notice the reasoner is doing something CEM alone cannot: it explains *why* the payer side is uninformative, and it names the cost of each move. That cost commentary is what feeds our attacker-cost-frontier chart.
 
-**Your job is not to write this.** Your job is to write `param_semantics` well enough that the LLM can produce it. Test it early — run one reasoning call by hand at around hour 12 and check that the output is sensible. If the LLM proposes nonsense, your semantics are too thin.
+**Your job is not to write this.** Your job is to write `param_semantics` well enough that Codex can produce it. Test it early — run one reasoning pass through the shared `codex exec` adapter at around hour 12 and check that the output is sensible. If Codex proposes nonsense, your semantics are too thin.
 
 ### The mutations it lands on
 
@@ -335,9 +335,9 @@ Note `utility` falling from ~1.0 to 0.38. That is the attacker paying for evasio
 | 22–26 | Measure round-1 AUCs, write README signal mortality table |
 | 26+ | Phase 3: you own `loop/run_rounds.py` and the **two-stage red agent** |
 
-**Your Phase 3 job grew.** You now build both stages: `redteam/llm_agent.py` (prompt, strict JSON parsing, clamping to `param_space`, retry, caching) and `redteam/cem.py`. Roughly 3 extra hours.
+**Your Phase 3 job grew.** You now build both stages: `redteam/llm_agent.py` (read-only `codex exec` subprocess adapter, JSON Schema output, timeout/error handling, clamping to `param_space`, retry, and caching) and `redteam/cem.py`. It must reuse ChatGPT subscription authentication from `codex login`; do not add an OpenAI API key or SDK. Roughly 3 extra hours.
 
-**Build order matters.** Get the pure-CEM loop running end to end first, then bolt the LLM reasoner on top of it. A working numeric loop you upgrade is far safer than an LLM loop that fails to parse at hour 40. The LLM path must always fall back to CEM on any error.
+**Build order matters.** Get the pure-CEM loop running end to end first, then bolt the Codex reasoner on top of it. A working numeric loop you upgrade is far safer than a Codex subprocess that fails at hour 40. The Codex path must always fall back to CEM on a missing CLI, authentication failure, timeout, non-zero exit, or invalid response.
 
 ## 10. Do not
 

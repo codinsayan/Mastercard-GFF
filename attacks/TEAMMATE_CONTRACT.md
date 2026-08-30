@@ -20,6 +20,11 @@ The generator must implement `describe_state()`. The returned `param_semantics` 
 cover every parameter, and `defender_signals` must cover every emitted feature exactly.
 Keep both mappings synchronized with `card.json`.
 
+The shared red-agent runner will use ChatGPT-authenticated `codex exec`, not an LLM API.
+Attack packages do not handle credentials or invoke Codex themselves; they only provide
+the state and semantics consumed by the shared reasoner. All Codex output is generated
+during precomputation and cached before the judging demo.
+
 Run your merge gate with:
 
 ```powershell
@@ -28,4 +33,3 @@ python -m pytest tests/test_contract.py -k a1
 
 A skipped test means the three package exports are not wired yet; a merge-ready attack
 must pass, not skip.
-

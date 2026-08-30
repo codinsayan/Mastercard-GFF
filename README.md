@@ -21,6 +21,11 @@ Attack owners must read `attacks/TEAMMATE_CONTRACT.md`. The updated contract req
 `describe_state()`, complete parameter/feature semantics in `card.json`, and exports of
 `GENERATOR`, `FEATURE_BLOCK`, and `DETECTOR` from each attack package.
 
-The red-team reasoner is provider-neutral: inject an API callable during precomputation,
-then cache the exchange as `results/round_N/redteam_reasoning.json`. No live API call is
-made by the judging dashboard.
+The red-team reasoner will run through the Codex CLI with ChatGPT subscription authentication;
+it does not use OpenAI API credits. Sign in locally with `codex login`, then the Python
+orchestrator will invoke `codex exec` in read-only, non-interactive mode with a JSON output
+schema. The full exchange is cached as `results/round_N/redteam_reasoning.json`, and the
+judging dashboard never invokes Codex or requires credentials.
+
+This follows OpenAI's documented [ChatGPT subscription authentication](https://learn.chatgpt.com/docs/auth)
+and [`codex exec` non-interactive workflow](https://learn.chatgpt.com/docs/non-interactive-mode).
