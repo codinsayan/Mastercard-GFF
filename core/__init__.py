@@ -1,0 +1,2 @@
+"""Shared, frozen integration contracts."""
+

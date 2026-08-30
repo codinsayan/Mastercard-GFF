@@ -1,0 +1,13 @@
+pandas>=2.2,<3
+numpy>=2.0,<3
+pyarrow>=17,<22
+duckdb>=1.1,<2
+lightgbm>=4.5,<5
+scikit-learn>=1.5,<2
+networkx>=3.3,<4
+sentence-transformers>=3.1,<6
+torch>=2.4,<3
+streamlit>=1.38,<2
+plotly>=5.24,<7
+pytest>=8.3,<10
+
