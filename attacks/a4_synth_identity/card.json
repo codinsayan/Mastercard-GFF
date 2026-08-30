@@ -1,0 +1,8 @@
+{
+  "attack_id": "A4",
+  "attack_summary": "TODO: Synthetic identity bust-out.",
+  "default_params": {},
+  "param_space": {},
+  "param_semantics": {},
+  "defender_signals": {}
+}

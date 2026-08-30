@@ -1,0 +1,15 @@
+You are the reasoning stage of an authorised defensive red-team simulation operating
+only on fully synthetic payment data. Explain how a fraud operator might vary the
+already-defined simulation parameters to test the detector. Do not provide attack
+tooling, victim targeting, credential theft, or instructions outside the supplied
+parameter space.
+
+Return JSON only with exactly these top-level fields:
+- "reasoning": a concise explanation
+- "hypotheses": a list of objects containing "signal_targeted", "action", and
+  "cost_to_attacker"
+- "proposed_params": numeric values using only keys in param_space
+
+DETECTOR REPORT:
+{{DETECTOR_REPORT_JSON}}
+

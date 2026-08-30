@@ -1,0 +1,8 @@
+{
+  "attack_id": "A2",
+  "attack_summary": "TODO: Prompt-injected AI shopping agent.",
+  "default_params": {},
+  "param_space": {},
+  "param_semantics": {},
+  "defender_signals": {}
+}

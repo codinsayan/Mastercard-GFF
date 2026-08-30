@@ -1,0 +1,8 @@
+{
+  "attack_id": "A1",
+  "attack_summary": "TODO: Deepfake coercion to UPI mule cash-out.",
+  "default_params": {},
+  "param_space": {},
+  "param_semantics": {},
+  "defender_signals": {}
+}

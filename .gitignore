@@ -2,10 +2,10 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+pytest-cache-files-*/
 .ruff_cache/
 .coverage
 data/raw/
 data/processed/
 results/round_*/
 *.parquet
-

@@ -1,0 +1,8 @@
+{
+  "attack_id": "A3",
+  "attack_summary": "TODO: Agentic card testing.",
+  "default_params": {},
+  "param_space": {},
+  "param_semantics": {},
+  "defender_signals": {}
+}
