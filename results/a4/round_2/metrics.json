@@ -1,84 +1,55 @@
 {
   "params": {
-    "n_clusters": 30,
-    "identities_per_cluster": 13,
-    "attribute_overlap_rate": 0.0,
-    "build_days": 32,
-    "utilization_curve_exponent": 1.0,
-    "bustout_sync_window_days": 45,
-    "playbook_variance": 0.8
+    "n_clusters": 12,
+    "identities_per_cluster": 40,
+    "attribute_overlap_rate": 0.02,
+    "build_days": 96,
+    "utilization_curve_exponent": 2.7635227522852057,
+    "bustout_sync_window_days": 5,
+    "playbook_variance": 0.761181114063567
   },
   "proposal": {
-    "reasoning": "Stress the post-fix detector by minimizing cross-account linkage and coordinated timing while preserving enough synthetic campaigns for evaluation. The strongest signals are payment regularity and bust-out synchronization, so maximize playbook variance and widen the synchronization window; use small clusters, distinct attributes, a long build period, and a near-linear utilization ramp to weaken cluster, age, and convexity signals.",
-    "hypotheses": [
-      {
-        "signal_targeted": "a4_bustout_sync_score",
-        "action": "Increase bustout_sync_window_days to 45 so high-utilization transitions are dispersed beyond the detector's seven-day window.",
-        "cost_to_attacker": "High: early outcomes can expose the campaign before later synthetic accounts complete the scenario."
-      },
-      {
-        "signal_targeted": "a4_payment_ratio_regularity",
-        "action": "Set playbook_variance to 0.8 to diversify synthetic repayment and spending trajectories.",
-        "cost_to_attacker": "High: reduces automation and operational consistency."
-      },
-      {
-        "signal_targeted": "a4_trajectory_cluster_density, a4_trajectory_cluster_size, a4_trajectory_dist_to_centroid",
-        "action": "Reduce identities_per_cluster to 10 while retaining 30 independent clusters and maximum playbook variance.",
-        "cost_to_attacker": "Moderate to high: requires more independent campaign setups for the same synthetic population."
-      },
-      {
-        "signal_targeted": "a4_ramp_convexity, a4_account_age_at_first_large_txn",
-        "action": "Use a utilization_curve_exponent near 1 and extend build_days to 180.",
-        "cost_to_attacker": "High: delays the simulated payout and ties up synthetic capital longer."
-      },
-      {
-        "signal_targeted": "a4_shared_address_token_count, a4_shared_device_prefix_count, a4_phone_block_density",
-        "action": "Keep attribute_overlap_rate at 0.0 as a control confirming that attribute-linkage signals remain neutral.",
-        "cost_to_attacker": "Low under the supplied assumption that distinct synthetic attributes are inexpensive to generate."
-      }
-    ],
+    "reasoning": "Codex was unavailable or invalid; using the deterministic CEM seed.",
+    "hypotheses": [],
     "proposed_params": {
-      "n_clusters": 30,
-      "identities_per_cluster": 10,
-      "attribute_overlap_rate": 0.0,
-      "build_days": 180,
-      "utilization_curve_exponent": 1.05,
-      "bustout_sync_window_days": 45,
-      "playbook_variance": 0.8
+      "playbook_variance": 0.6,
+      "build_days": 150,
+      "utilization_curve_exponent": 1.15,
+      "bustout_sync_window_days": 20
     }
   },
   "pre_fix": {
-    "recall": 0.16153846153846155,
-    "precision": 1.0,
-    "auc_pr": 0.9978555970883336,
-    "recall_at_fpr_0.001": 0.16153846153846155,
-    "fpr_at_recall_0.85": 0.001303780964797914
+    "recall": 1.0,
+    "precision": 0.935672514619883,
+    "auc_pr": 0.935672514619883,
+    "recall_at_fpr_0.001": 0.0,
+    "fpr_at_recall_0.85": 0.03441084462982273
   },
   "post_fix": {
-    "recall": 0.9948717948717949,
-    "precision": 1.0,
-    "auc_pr": 0.9966004033419764,
-    "recall_at_fpr_0.001": 0.9948717948717949,
-    "fpr_at_recall_0.85": 0.0
+    "recall": 0.4083333333333333,
+    "precision": 0.9849246231155779,
+    "auc_pr": 0.9431743108087081,
+    "recall_at_fpr_0.001": 0.4083333333333333,
+    "fpr_at_recall_0.85": 0.040667361835245046
   },
   "signal_auc": {
-    "a4_shared_address_token_count": 0.5,
-    "a4_shared_device_prefix_count": 0.5,
+    "a4_shared_address_token_count": 0.5104166666666666,
+    "a4_shared_device_prefix_count": 0.5041666666666667,
     "a4_phone_block_density": 0.5,
-    "a4_account_age_at_first_large_txn": 0.5578277003309597,
-    "a4_trajectory_cluster_density": 0.774820312238826,
-    "a4_trajectory_dist_to_centroid": 0.7166181927590011,
-    "a4_trajectory_cluster_size": 0.774820312238826,
-    "a4_ramp_convexity": 0.84505733293217,
-    "a4_payment_ratio_regularity": 1.0,
-    "a4_bustout_sync_score": 0.9974158392672082
+    "a4_account_age_at_first_large_txn": 0.8283476711852624,
+    "a4_trajectory_cluster_density": 0.7340980187695516,
+    "a4_trajectory_dist_to_centroid": 0.6098561870003476,
+    "a4_trajectory_cluster_size": 0.7340980187695516,
+    "a4_ramp_convexity": 0.9860140771637121,
+    "a4_payment_ratio_regularity": 0.5998305526590197,
+    "a4_bustout_sync_score": 0.978264033715676
   },
-  "utility": 0.7375340239133541,
-  "build_amount_ks": 0.09314814261843618,
+  "utility": 0.6207261283290894,
+  "build_amount_ks": 0.0332602739502007,
   "budget": {
     "accepted": true,
-    "utility": 0.7375340239133541,
-    "max_ks": 0.09314814261843618,
+    "utility": 0.6207261283290894,
+    "max_ks": 0.0332602739502007,
     "reason": ""
   }
 }

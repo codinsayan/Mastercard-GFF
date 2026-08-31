@@ -1,51 +1,24 @@
 {
   "params": {
-    "n_clusters": 30,
-    "identities_per_cluster": 27,
-    "attribute_overlap_rate": 0.0,
-    "build_days": 53,
-    "utilization_curve_exponent": 1.5676300797085287,
-    "bustout_sync_window_days": 17,
-    "playbook_variance": 0.8
+    "n_clusters": 12,
+    "identities_per_cluster": 40,
+    "attribute_overlap_rate": 0.02,
+    "build_days": 75,
+    "utilization_curve_exponent": 2.4,
+    "bustout_sync_window_days": 4,
+    "playbook_variance": 0.05
   },
   "proposal": {
-    "reasoning": "The detector is dominated by synchronized bust-out, payment regularity, ramp convexity, and shared attributes. A bounded stress test should reduce within-cluster similarity, flatten and lengthen utilization growth, spread final draw-downs, and use smaller clusters while increasing their count to retain adequate synthetic sample volume.",
-    "hypotheses": [
-      {
-        "signal_targeted": "a4_shared_address_token_count, a4_shared_device_prefix_count, a4_phone_block_density",
-        "action": "Lower attribute_overlap_rate from 0.70 to 0.10.",
-        "cost_to_attacker": "Low; distinct synthetic attributes add little generation cost, though operational consistency becomes harder."
-      },
-      {
-        "signal_targeted": "a4_ramp_convexity, a4_account_age_at_first_large_txn",
-        "action": "Increase build_days and move utilization_curve_exponent close to linear.",
-        "cost_to_attacker": "High; capital remains committed longer and payout is delayed."
-      },
-      {
-        "signal_targeted": "a4_payment_ratio_regularity, a4_trajectory_cluster_density, a4_trajectory_dist_to_centroid",
-        "action": "Increase playbook_variance to diversify repayment and utilization trajectories.",
-        "cost_to_attacker": "High; reduced automation raises operating effort and error risk."
-      },
-      {
-        "signal_targeted": "a4_bustout_sync_score, a4_trajectory_cluster_size",
-        "action": "Use fewer identities per cluster and widen the bust-out synchronization window, offset by more independent clusters.",
-        "cost_to_attacker": "Medium to high; infrastructure and synthetic KYC requirements grow, while early defaults may alert the issuer before later draw-downs."
-      }
-    ],
+    "reasoning": "Codex was unavailable or invalid; using the deterministic CEM seed.",
+    "hypotheses": [],
     "proposed_params": {
-      "n_clusters": 24,
-      "identities_per_cluster": 18,
-      "attribute_overlap_rate": 0.1,
-      "build_days": 140,
-      "utilization_curve_exponent": 1.15,
-      "bustout_sync_window_days": 30,
-      "playbook_variance": 0.55
+      "attribute_overlap_rate": 0.02
     }
   },
   "pre_fix": {
     "recall": 0.0,
     "precision": 0.0,
-    "auc_pr": 0.33388293487221765,
+    "auc_pr": 0.33356497567755383,
     "recall_at_fpr_0.001": 0.0,
     "fpr_at_recall_0.85": 1.0
   },
@@ -57,16 +30,16 @@
     "fpr_at_recall_0.85": 0.0
   },
   "signal_auc": {
-    "a4_shared_address_token_count": 0.5,
-    "a4_shared_device_prefix_count": 0.5,
-    "a4_phone_block_density": 0.5,
-    "a4_account_age_at_first_large_txn": 0.5352936682557144,
-    "a4_trajectory_cluster_density": 0.7112616122723383,
-    "a4_trajectory_dist_to_centroid": 0.6059520535386872,
-    "a4_trajectory_cluster_size": 0.7112616122723383,
-    "a4_ramp_convexity": 0.6870393289328933,
-    "a4_payment_ratio_regularity": 0.9999633296663,
-    "a4_bustout_sync_score": 1.0
+    "a4_shared_address_token_count": 0.5052083333333334,
+    "a4_shared_device_prefix_count": 0.5020833333333333,
+    "a4_phone_block_density": 0.50625,
+    "a4_account_age_at_first_large_txn": 0.6161746176572819,
+    "a4_trajectory_cluster_density": 0.6287799791449427,
+    "a4_trajectory_dist_to_centroid": 0.6444495133819952,
+    "a4_trajectory_cluster_size": 0.6287799791449427,
+    "a4_ramp_convexity": 0.9835875043448035,
+    "a4_payment_ratio_regularity": 0.9710983663538407,
+    "a4_bustout_sync_score": 0.9999999999999999
   },
-  "utility": 0.780734876426842
+  "utility": 0.7228458732017304
 }

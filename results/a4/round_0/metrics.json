@@ -23,8 +23,8 @@
     "a4_trajectory_cluster_density": 0.5897703549060542,
     "a4_trajectory_dist_to_centroid": 0.5897159881697981,
     "a4_trajectory_cluster_size": 0.5897703549060542,
-    "a4_ramp_convexity": 0.9912382567849687,
-    "a4_payment_ratio_regularity": 0.9958246346555324,
+    "a4_ramp_convexity": 0.9858624739039666,
+    "a4_payment_ratio_regularity": 0.9672016353514266,
     "a4_bustout_sync_score": 1.0
   },
   "utility": 0.7321534704569971

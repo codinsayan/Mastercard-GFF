@@ -41,6 +41,14 @@ def measured_results() -> dict | None:
 
 def main() -> None:
     st.set_page_config(page_title="A4 Synthetic Identity Lab", layout="wide")
+    st.error(
+        "**Developer lab - not the judging demo.** This page generates data and fits a "
+        "detector live, in-sample, on every interaction: its scores are for eyeballing "
+        "generator changes and are not evaluation metrics. For judges run "
+        "`streamlit run attacks/a4_synth_identity/demo_app.py`, which replays precomputed "
+        "results and trains nothing.",
+        icon=":material/science:",
+    )
     st.title("A4 · Synthetic Identity Bust-Out Lab")
     st.caption(
         "Interactive smoke test using campaign-snapshot features. Scores are fitted in-sample "

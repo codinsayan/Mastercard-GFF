@@ -73,7 +73,19 @@ class A4Features:
             utilization = group["utilization"].to_numpy(dtype=float)
             payment = group["payment"].to_numpy(dtype=float)
             limit = group["limit"].replace(0, np.nan).to_numpy(dtype=float)
-            build = utilization < 0.85
+            # The build window is everything before this account's first utilization spike,
+            # not every row that happens to sit under the threshold. A draw-down opens below
+            # 0.85 before crossing it, so a fixed threshold readmits the first draw-down row
+            # -- and its zero repayment -- into the account's own build statistics, which
+            # made payment regularity a detector of missed payments instead. Derived from
+            # observed utilization only; the generator's phase label is never read.
+            spike = day[utilization >= 0.85]
+            spike_day = float(spike.min()) if len(spike) else np.nan
+            build = (
+                day < spike_day
+                if np.isfinite(spike_day)
+                else np.ones(len(day), dtype=bool)
+            )
             build_day = day[build]
             build_utilization = utilization[build]
             if len(np.unique(build_day)) >= 3:
@@ -86,8 +98,6 @@ class A4Features:
             regularity = 1 / (1 + 100 * payment_std)
             large = group["amount"].to_numpy(dtype=float) >= 0.2 * np.nan_to_num(limit)
             first_large_day = float(day[large].min()) if large.any() else float(day.max())
-            spike = day[utilization >= 0.85]
-            spike_day = float(spike.min()) if len(spike) else np.nan
             summaries.append((customer_id, first_large_day, convexity, regularity, spike_day))
 
         summary = pd.DataFrame(

@@ -1,9 +1,12 @@
 """Focused behavioral checks for the A4 package."""
 
+import ast
+import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 from streamlit.testing.v1 import AppTest
 
 from attacks.a4_synth_identity.detector import A4Detector
@@ -103,3 +106,82 @@ def test_manual_interface_executes_without_errors():
     app.radio[0].set_value("Round 1: diversified")
     app.button[0].click().run()
     assert not app.exception
+
+
+def test_build_window_excludes_every_bustout_row():
+    """The build window must stop at an account's first spike, not at a fixed threshold.
+
+    A draw-down opens below 0.85 before crossing it. When the window was defined as
+    ``utilization < 0.85`` that opening row -- carrying a zero repayment -- fell back
+    inside the account's build statistics, so a4_payment_ratio_regularity scored a
+    missed payment rather than repayment regularity.
+    """
+    events = A4Generator().generate(_params(), _population(), 17)
+    day = events["meta"].map(lambda value: value["a4_days_since_onboarding"])
+    utilization = events["meta"].map(lambda value: value["a4_utilization"])
+    phase = events["meta"].map(lambda value: value["a4_phase"])
+    frame = pd.DataFrame(
+        {"customer": events["customer_id"], "day": day, "u": utilization, "phase": phase}
+    )
+
+    leaked = 0
+    for _, group in frame.groupby("customer", sort=False):
+        spike = group.loc[group["u"] >= 0.85, "day"]
+        if not len(spike):
+            continue
+        in_build = group[group["day"] < spike.min()]
+        leaked += int(in_build["phase"].eq("BUSTOUT").sum())
+    assert leaked == 0
+
+    # and the feature it corrupted now points the way its description claims:
+    # synthetic accounts repay more consistently than organic ones.
+    features = A4Features(trajectory_epochs=0).build(events)
+    assert features["a4_payment_ratio_regularity"].gt(0.3).all()
+
+
+def test_demo_app_is_replay_only_and_every_screen_renders():
+    """The judging demo must replay artifacts: no training, no generation, no network.
+
+    Enforced structurally rather than by convention -- importing the generator, the
+    detector or torch is what would let a screen start computing on stage.
+    """
+    app = Path(__file__).resolve().parents[1] / "demo_app.py"
+    tree = ast.parse(app.read_text(encoding="utf-8"))
+    imported: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module)
+    heavy = {name for name in imported if name.split(".")[0] in {"torch", "sklearn"}}
+    assert not heavy, f"demo_app.py must not import {heavy}"
+    attack_modules = {
+        name
+        for name in imported
+        if name.startswith("attacks.") and not name.endswith("build_demo_assets")
+    }
+    assert not attack_modules, f"demo_app.py must not import {attack_modules}"
+    for screen in (
+        "1 · The innocent transaction",
+        "3 · Signal mortality",
+        "4 · The attacker's words",
+        "5 · Scoreboard & caveats",
+    ):
+        test = AppTest.from_file(str(app), default_timeout=120).run()
+        assert not test.exception
+        test.sidebar.radio[0].set_value(screen).run()
+        assert not test.exception, f"{screen} raised"
+
+
+def test_demo_assets_are_small_and_complete():
+    assets_path = Path(__file__).resolve().parents[3] / "results" / "a4" / "demo_assets.json"
+    if not assets_path.exists():
+        pytest.skip("demo assets not built; run build_demo_assets.py")
+    assets = json.loads(assets_path.read_text(encoding="utf-8"))
+    assert set(assets) >= {"hook", "cohort", "rounds", "reference"}
+    assert {"0", "1", "2"} == set(assets["rounds"])
+    # committed to git, so it has to stay small
+    assert assets_path.stat().st_size < 1_000_000
+    # the hook table must show ordinary build rows and the draw-down that follows
+    phases = {row["phase"] for row in assets["hook"]["rows"]}
+    assert "BUILD" in phases and "BUSTOUT" in phases
