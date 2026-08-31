@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,7 @@ ROUND0_FEATURES = [
 ]
 DURABLE_FEATURES = A1Features.feature_names()
 DEFAULT_OUTPUT = Path(__file__).with_name("results") / "iteration8_metrics.json"
+MAX_REFERENCE_ROWS = 500_000
 
 
 @dataclass
@@ -51,6 +53,110 @@ def _reference_frame() -> pd.DataFrame:
             "mcc": ["5411", "5812", "4121", "5499", "5732", "5999", "5311", "5541", "5942"],
         }
     )
+
+
+def _reference_provenance(path: Path, frame: pd.DataFrame, source_rows: int) -> dict:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return {
+        "kind": "external_reference",
+        "source_file": path.name,
+        "sha256": digest.hexdigest(),
+        "source_rows": source_rows,
+        "legitimate_rows_used": len(frame),
+    }
+
+
+def _load_external_reference(path: Path, *, seed: int = 42) -> tuple[pd.DataFrame, dict]:
+    """Load legitimate amount/category marginals from Sparkov or IEEE-CIS."""
+    if not path.is_file():
+        raise FileNotFoundError(f"reference dataset not found: {path}")
+    suffix = path.suffix.lower()
+    if suffix == ".parquet":
+        raw = pd.read_parquet(path)
+    elif suffix in {".csv", ".txt"}:
+        raw = pd.read_csv(path)
+    else:
+        raise ValueError("reference must be a CSV, TXT, or Parquet file")
+
+    amount_name = next(
+        (name for name in ("amount", "amt", "TransactionAmt") if name in raw), None
+    )
+    if amount_name is None:
+        raise ValueError("reference needs amount, amt, or TransactionAmt")
+    category_name = next(
+        (name for name in ("mcc", "category", "ProductCD") if name in raw), None
+    )
+    label_name = next(
+        (name for name in ("isFraud", "is_fraud", "label") if name in raw), None
+    )
+    source_rows = len(raw)
+    if label_name is not None:
+        labels = pd.to_numeric(raw[label_name], errors="coerce")
+        raw = raw.loc[labels.eq(0)]
+    normalized = pd.DataFrame(
+        {
+            "amount": pd.to_numeric(raw[amount_name], errors="coerce"),
+            "mcc": raw[category_name].astype("string") if category_name else "UNKNOWN",
+        }
+    )
+    normalized = normalized.loc[
+        np.isfinite(normalized["amount"]) & normalized["amount"].gt(0)
+    ].dropna(subset=["mcc"])
+    if normalized.empty:
+        raise ValueError("reference contains no usable legitimate positive-amount rows")
+    if len(normalized) > MAX_REFERENCE_ROWS:
+        normalized = normalized.sample(MAX_REFERENCE_ROWS, random_state=seed)
+    normalized = normalized.reset_index(drop=True)
+    provenance = _reference_provenance(path, normalized, source_rows)
+    provenance["format"] = (
+        "IEEE-CIS" if amount_name == "TransactionAmt" else "Sparkov"
+        if amount_name == "amt" else "normalized"
+    )
+    provenance["amount_column"] = amount_name
+    provenance["category_column"] = category_name or "UNKNOWN"
+    provenance["label_column"] = label_name
+    return normalized, provenance
+
+
+def _enrich_legitimate_a1_context(population: pd.DataFrame, *, seed: int) -> pd.DataFrame:
+    """Add deterministic, plausible A1 context to the synthetic legitimate fixture.
+
+    This prevents missing metadata and uniformly old VPAs from becoming label shortcuts.
+    It is development calibration, not a substitute for a public reference dataset.
+    """
+    enriched = population.copy(deep=True)
+    rng = np.random.default_rng(seed)
+    p2p = enriched["channel"].eq("UPI_P2P").to_numpy()
+    first_time = enriched["is_first_time_payee"].eq(1).to_numpy()
+
+    # Model a mixed VPA portfolio with genuinely new, established, and old accounts.
+    age_bucket = rng.choice(3, len(enriched), p=[0.12, 0.23, 0.65])
+    ages = np.select(
+        [age_bucket == 0, age_bucket == 1],
+        [rng.integers(1, 31, len(enriched)), rng.integers(31, 181, len(enriched))],
+        default=rng.integers(181, 3651, len(enriched)),
+    )
+    enriched["counterparty_account_age_days"] = enriched[
+        "counterparty_account_age_days"
+    ].astype("int64")
+    enriched.loc[p2p, "counterparty_account_age_days"] = ages[p2p]
+
+    # First-time legitimate payees can be paid shortly after addition too. Existing
+    # payees retain the neutral missing value used by the feature implementation.
+    delays = np.clip(rng.lognormal(np.log(900.0), 1.35, len(enriched)), 20, 86_400 * 30)
+    timestamps = pd.to_datetime(enriched["timestamp"])
+    meta_values: list[dict] = []
+    for index, value in enumerate(enriched["meta"]):
+        meta = dict(value) if isinstance(value, dict) else {}
+        if p2p[index] and first_time[index]:
+            added_at = timestamps.iloc[index] - pd.to_timedelta(delays[index], unit="s")
+            meta["a1_payee_added_at"] = added_at.isoformat()
+        meta_values.append(meta)
+    enriched["meta"] = meta_values
+    return enriched
 
 
 def _build_set(
@@ -121,12 +227,27 @@ def _infrastructure(events: pd.DataFrame) -> dict:
     }
 
 
-def run_experiment(*, population_events: int = 6_000, output: Path = DEFAULT_OUTPUT) -> dict:
+def run_experiment(
+    *,
+    population_events: int = 6_000,
+    output: Path = DEFAULT_OUTPUT,
+    reference_path: Path | None = None,
+) -> dict:
     generator = A1Generator()
+    if reference_path is None:
+        reference = _reference_frame()
+        reference_info = {
+            "kind": "development_fixture",
+            "description": "embedded amount/MCC fixture",
+            "legitimate_rows_used": len(reference),
+        }
+    else:
+        reference, reference_info = _load_external_reference(reference_path)
     population = BasePopulation(
-        _reference_frame(),
+        reference,
         PopulationConfig(customers=500, events=population_events),
     ).generate(seed=42)
+    population = _enrich_legitimate_a1_context(population, seed=43)
     ordered_legit = population.sort_values(["timestamp", "event_id"], kind="stable")
     split = int(len(ordered_legit) * 0.7)
     train_ids = set(ordered_legit.iloc[:split]["event_id"].astype(str))
@@ -177,7 +298,11 @@ def run_experiment(*, population_events: int = 6_000, output: Path = DEFAULT_OUT
     result = {
         "methodology": {
             "population_events": population_events,
-            "reference": "development fixture; replace with Sparkov/IEEE-CIS for final fidelity claims",
+            "reference": reference_info,
+            "fixture_corrections": [
+                "legitimate first-time UPI payees receive deterministic payee-addition history",
+                "legitimate UPI beneficiary ages use a new/established/old mixture",
+            ],
             "campaign_seeds": {
                 "default_train": 101,
                 "default_test": 102,
@@ -218,8 +343,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--population-events", type=int, default=6_000)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--reference", type=Path)
     args = parser.parse_args()
-    result = run_experiment(population_events=args.population_events, output=args.output)
+    result = run_experiment(
+        population_events=args.population_events,
+        output=args.output,
+        reference_path=args.reference,
+    )
     print(json.dumps(result["experiments"], indent=2))
 
 

@@ -105,57 +105,72 @@ The runner uses:
 The full measured artifact is stored in
 [`results/iteration8_metrics.json`](results/iteration8_metrics.json).
 
-## Development measurement — important limitation
+### External-reference validation
 
-The current run uses a small development amount/MCC fixture because Sparkov or IEEE-CIS
-has not yet been placed under `data/raw/`. These figures validate the experiment pipeline;
-they are **not final fidelity or judging claims**.
+For showcase metrics, place an authorized Sparkov or IEEE-CIS transaction file under
+`data/raw/` and run:
+
+```powershell
+python -m attacks.a1_upi_mule.experiment `
+  --reference data/raw/fraudTrain.csv `
+  --population-events 6000 `
+  --output attacks/a1_upi_mule/results/iteration8_metrics_external.json
+```
+
+Use `data/raw/train_transaction.csv` for IEEE-CIS. The loader recognizes both schemas,
+filters source fraud rows from legitimate baseline calibration, deterministically caps
+very large references at 500,000 rows, and records a SHA-256 digest plus row counts. The
+Iteration 11 demo should display an **External reference** badge only when the selected
+artifact has `methodology.reference.kind == "external_reference"`.
+
+## Corrected development measurement — important limitation
+
+The completed rerun uses a small development amount/MCC fixture because Sparkov or
+IEEE-CIS has not been placed under `data/raw/`. The fixture now gives legitimate
+first-time UPI payees plausible payee-addition timestamps and uses a mixed
+new/established/old beneficiary-age distribution. This removes the two known label
+shortcuts from the original development run. These figures validate the experiment
+pipeline and provide cached inputs for the replay demo; they are **not external-dataset
+fidelity or production claims**.
 
 | Experiment | Recall | Precision | AUC-PR | Recall @ FPR 0.001 |
 |---|---:|---:|---:|---:|
-| Round 0 | 1.000 | 0.988 | 1.000 | 1.000 |
-| Adapted, frozen detector | 1.000 | 0.997 | 1.000 | 1.000 |
-| Adapted, old features retrained | 1.000 | 0.992 | 1.000 | 1.000 |
-| Adapted, durable features | 1.000 | 0.992 | 1.000 | 1.000 |
+| Round 0 | 1.000 | 0.994 | 1.000 | 1.000 |
+| Adapted, frozen detector | 0.000 | 0.000 | 0.406 | 0.000 |
+| Adapted, old features retrained | 1.000 | 0.995 | 1.000 | 0.995 |
+| Adapted, durable features | 1.000 | 0.994 | 1.000 | 1.000 |
 
-These perfect results are a diagnostic warning, not a success claim. The expected signal
-mortality did not occur. The development data contains two shortcuts:
-
-1. legitimate rows have no payee-addition metadata, while A1 rows always have it, making
-   `a1_payee_added_to_transfer_seconds` perfectly discriminative;
-2. the shared development population gives beneficiaries broadly uniform ages, making a
-   45-day adapted mule still unusually young.
-
-Before final measurement, legitimate traffic must receive realistic payee-addition
-history and beneficiary-age marginals must be fitted to Sparkov/IEEE-CIS or another
-defensible public source. The frozen-detector experiment must then be rerun. Do not use
-the current perfect metrics in the pitch as evidence of adaptation or recovery.
+The frozen Round-0 detector collapses on the adapted campaign at its original threshold,
+while both retrained variants recover on held-out adapted campaigns. Old-feature recovery
+is nearly perfect in this synthetic fixture, so the result does not prove the durable
+features are uniquely responsible for recovery. The durable model nevertheless restores
+recall and provides graph/coercion signals for when node-level signals weaken.
 
 ## Current signal-mortality table
 
 | Signal | Round-0 AUC | Adapted AUC | Current verdict |
 |---|---:|---:|---|
-| `a1_benef_account_age_days` | 0.999 | 0.993 | NOT DEAD — fixture shortcut remains |
+| `a1_benef_account_age_days` | 0.989 | 0.962 | ALIVE, weaker after adaptation |
 | `a1_benef_fanin_24h` | 0.725 | 0.723 | ALIVE |
 | `a1_dissipation_ratio` | 0.816 | 0.734 | DEGRADED |
 | `a1_payer_amount_zscore` | 0.692 | 0.612 | DEGRADED |
-| `a1_payee_added_to_transfer_seconds` | 1.000 | 1.000 | INVALID SHORTCUT in development fixture |
-| `a1_component_size` | — | 1.000 | NEW, requires realistic rerun |
-| `a1_cashout_convergence` | — | 1.000 | NEW, requires realistic rerun |
+| `a1_payee_added_to_transfer_seconds` | 0.512 | 0.512 | DEAD / near random |
+| `a1_component_size` | — | 1.000 | NEW, strong in synthetic fixture |
+| `a1_cashout_convergence` | — | 1.000 | NEW, strong in synthetic fixture |
 | `a1_call_active` | — | 0.533 | Weak when all laundering hops are scored |
 
 This table intentionally reports what was measured instead of copying illustrative AUCs
 from the attack brief.
 
-## Known limitations and required final rerun
+## Known limitations
 
 - Replace the development fixture with real reference-calibrated traffic.
-- Populate legitimate payee-addition metadata from a realistic distribution.
+- Validate the synthetic payee-addition and beneficiary-age assumptions against that
+  reference source.
 - Decide and report whether authorization-time and delayed-monitoring rows are evaluated
   separately; combining every laundering hop dilutes the victim-only call signal.
 - Validate the graph implementation on production-scale samples and record memory/time.
-- Rerun all four experiments using held-out campaigns.
-- Update this README and the demo only from the regenerated metrics artifact.
+- Keep the demo tied to the regenerated JSON artifact rather than hard-coded metrics.
 
 ## Reproduction
 
@@ -167,6 +182,28 @@ python -m ruff check attacks/a1_upi_mule
 python -m attacks.a1_upi_mule.experiment --population-events 6000
 ```
 
+## Adaptive three-round loop
+
+The shared orchestrator runs offline pure CEM by default and writes the frozen output
+contract for every round:
+
+```powershell
+python -m loop.run_rounds --rounds 0 1 2 --seed 42
+```
+
+Each `results/round_N/` directory contains `events.parquet`, `features.parquet`,
+`scores.parquet`, `metrics.json`, and `redteam_reasoning.json`. Offline mode deliberately
+records a Codex-disabled failure and continues through deterministic CEM, proving that a
+missing CLI, authentication problem, timeout, invalid response, or rejected proposal
+cannot stop the loop.
+
+The opt-in authenticated reasoner is enabled with `--use-codex`. It sends a bounded
+detector report, parameter semantics, metrics, and a small set of synthetic examples to
+the configured Codex service. Run that mode only after explicit approval for this data
+egress. A one-time approved audit completed successfully with Codex CLI
+`0.151.0-alpha.7.2`; the schema-valid response was accepted with `fallback_used: false`.
+The judging dashboard never enables it and only replays cached output.
+
 ## 60-second pitch
 
 > A fake police officer video-calls a victim and frightens them into transferring money.
@@ -176,7 +213,7 @@ python -m attacks.a1_upi_mule.experiment --population-events 6000
 > cash-out infrastructure. When the attacker ages accounts and spreads funds wider, the
 > infrastructure cost rises sharply. Our durable design combines network convergence with
 > payer-side coercion signals such as an active call. The final claim will use real
-> reference-calibrated traffic and held-out campaigns; our current development run has
-> already identified and documented metadata shortcuts that must be removed before we
-> present performance numbers.
-
+> held-out campaigns. In our corrected synthetic development run, adaptation drops the
+> frozen detector's recall from 100% to 0%; retraining with durable graph and coercion
+> features restores it to 100%. We label these as development results until they are
+> validated against an external reference dataset.

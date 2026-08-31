@@ -8,8 +8,8 @@ Return JSON only with exactly these top-level fields:
 - "reasoning": a concise explanation
 - "hypotheses": a list of objects containing "signal_targeted", "action", and
   "cost_to_attacker"
-- "proposed_params": numeric values using only keys in param_space
+- "proposed_params": numeric values for every key in param_space; retain the
+  current value for any parameter you do not propose changing, and add no other keys
 
 DETECTOR REPORT:
 {{DETECTOR_REPORT_JSON}}
-

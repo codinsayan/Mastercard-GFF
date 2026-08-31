@@ -9,7 +9,12 @@ import pandas as pd
 import pytest
 
 from attacks.a1_upi_mule.detector import A1Detector
-from attacks.a1_upi_mule.experiment import _metrics, _signal_auc
+from attacks.a1_upi_mule.experiment import (
+    _enrich_legitimate_a1_context,
+    _load_external_reference,
+    _metrics,
+    _signal_auc,
+)
 from attacks.a1_upi_mule.features import A1Features
 from attacks.a1_upi_mule.generator import A1Generator
 from core.population import BasePopulation, PopulationConfig
@@ -928,3 +933,42 @@ def test_signal_auc_reports_discriminative_direction_and_constant_neutrality():
     auc = _signal_auc(X, y, ["inverse", "constant"])
     assert auc["inverse"] == 1.0
     assert auc["constant"] == 0.5
+
+
+def test_experiment_enrichment_removes_known_legitimate_fixture_shortcuts(population):
+    enriched = _enrich_legitimate_a1_context(population, seed=43)
+    repeated = _enrich_legitimate_a1_context(population, seed=43)
+    assert enriched.equals(repeated)
+
+    first_time_p2p = enriched["channel"].eq("UPI_P2P") & enriched[
+        "is_first_time_payee"
+    ].eq(1)
+    assert first_time_p2p.any()
+    assert enriched.loc[first_time_p2p, "meta"].map(
+        lambda value: "a1_payee_added_at" in value
+    ).all()
+
+    p2p_ages = enriched.loc[
+        enriched["channel"].eq("UPI_P2P"), "counterparty_account_age_days"
+    ]
+    assert p2p_ages.between(1, 3650).all()
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected_format"),
+    [
+        ({"amt": [10, 20, 30], "category": ["food", "gas", "food"], "is_fraud": [0, 1, 0]}, "Sparkov"),
+        ({"TransactionAmt": [10, 20, 30], "ProductCD": ["W", "C", "R"], "isFraud": [0, 1, 0]}, "IEEE-CIS"),
+    ],
+)
+def test_external_reference_loader_filters_fraud_and_records_provenance(
+    tmp_path, columns, expected_format
+):
+    source = tmp_path / "reference.csv"
+    pd.DataFrame(columns).to_csv(source, index=False)
+    reference, provenance = _load_external_reference(source)
+    assert reference["amount"].tolist() == [10, 30]
+    assert provenance["format"] == expected_format
+    assert provenance["source_rows"] == 3
+    assert provenance["legitimate_rows_used"] == 2
+    assert len(provenance["sha256"]) == 64

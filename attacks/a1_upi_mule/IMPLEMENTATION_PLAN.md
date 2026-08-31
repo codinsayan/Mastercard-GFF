@@ -1025,10 +1025,11 @@ python -m pytest -q -p no:cacheprovider
 
 # Iteration 8 — Signal-mortality experiment
 
-**Status: IMPLEMENTED; FINAL RERUN REQUIRED** — the reproducible four-experiment pipeline
-and measured JSON artifact are complete. The development run exposed payee-metadata and
-beneficiary-age shortcuts, so final signal-mortality claims remain blocked on a real
-reference dataset and realistic legitimate metadata enrichment.
+**Status: COMPLETE FOR CORRECTED DEVELOPMENT BASELINE** — all four experiments were
+rerun on held-out campaigns after adding legitimate payee-addition context and mixed
+beneficiary-age marginals. The regenerated JSON records frozen-detector collapse and
+retraining recovery. External-dataset fidelity validation remains a stated project
+limitation, not a blocker for the replay-only Iteration 11 demo.
 
 ## Goal
 
@@ -1118,9 +1119,9 @@ Round 1 after durable-feature recovery
 
 # Iteration 9 — Documentation and pitch
 
-**Status: COMPLETE FOR DEVELOPMENT BASELINE** — README, methodology, measured tables,
-limitations, reproduction commands, and an evidence-qualified 60-second pitch are in
-place. Numeric tables must be refreshed after the final Iteration 8 rerun.
+**Status: COMPLETE FOR CORRECTED DEVELOPMENT BASELINE** — README methodology, measured
+tables, limitations, reproduction commands, adaptive-loop audit, and evidence-qualified
+60-second pitch have been refreshed from the corrected Iteration 8 artifact.
 
 ## Goal
 
@@ -1176,6 +1177,12 @@ the package README.
 ---
 
 # Iteration 10 — Person A Phase 3 responsibilities
+
+**Status: COMPLETE** — the three-round orchestrator, pure-CEM path, budget enforcement,
+strict Codex adapter, failure fallback, caching, and frozen outputs are implemented. A
+three-round offline run passes. After explicit data-egress approval, a live Codex CLI
+audit returned a schema-valid bounded proposal with `fallback_used: false`; both rounds
+wrote the complete frozen artifact contract.
 
 This iteration begins only after A1 is merge-ready and the team authorizes changes to
 shared files.
@@ -1261,6 +1268,12 @@ Verify all required Parquet and JSON artifacts exist for every round.
 ---
 
 # Iteration 11 — A1 web simulation demo
+
+**Prerequisite for authentic showcase metrics:** generate
+`results/iteration8_metrics_external.json` from an authorized Sparkov or IEEE-CIS source.
+The demo must inspect `methodology.reference.kind` and must not label the embedded fixture
+as external validation. Source datasets remain ignored under `data/raw/` and must never
+be committed.
 
 ## Goal
 
@@ -1678,10 +1691,13 @@ A1 is complete only when all items are true:
 - [x] Round-0 development metrics are measured on held-out campaign seeds.
 - [x] Adapted frozen-detector behavior is measured (no collapse occurred; shortcut documented).
 - [x] Old-feature-only retraining is measured.
-- [x] Durable-feature behavior is measured (final recovery claim awaits corrected rerun).
+- [x] Durable-feature behavior is measured in the corrected development rerun.
 - [x] README contains actual development signal AUCs and explicitly labels their limitations.
 - [x] Attacker utility and infrastructure cost are reported.
 - [x] The 60-second non-technical explanation is ready and evidence-qualified.
+- [x] Pure-CEM three-round orchestration writes all frozen outputs.
+- [x] Codex subprocess, schema, retry, timeout, clamping, caching, and fallback paths are tested.
+- [x] One live Codex reasoning exchange is audited after explicit data-egress approval.
 - [ ] A1 replay-only web demo renders a complete cached campaign.
 - [ ] Default/adapted comparison, reasoning, signal mortality, recall, and utility appear.
 - [ ] Web-demo view-model tests and manual presentation checks pass.
