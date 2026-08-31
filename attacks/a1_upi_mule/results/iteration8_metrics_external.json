@@ -1,0 +1,134 @@
+{
+  "methodology": {
+    "population_events": 6000,
+    "reference": {
+      "kind": "external_reference",
+      "source_file": "sparkov_reference.parquet",
+      "sha256": "66e87e17c8dae627d81e84e785e7cd7fb79ac5cb54d4fe159875084da35335c4",
+      "source_rows": 1289169,
+      "legitimate_rows_used": 500000,
+      "format": "Sparkov",
+      "amount_column": "amount",
+      "category_column": "mcc",
+      "label_column": null
+    },
+    "fixture_corrections": [
+      "legitimate first-time UPI payees receive deterministic payee-addition history",
+      "legitimate UPI beneficiary ages use a new/established/old mixture"
+    ],
+    "campaign_seeds": {
+      "default_train": 101,
+      "default_test": 102,
+      "adapted_train": 201,
+      "adapted_test": 202
+    },
+    "legitimate_split": "earliest 70% train, latest 30% test",
+    "feature_latency": "graph and dissipation features are delayed monitoring signals"
+  },
+  "params": {
+    "round_0": {
+      "n_victims": 20,
+      "mule_age_days": 2,
+      "split_factor": 3,
+      "dwell_time_hours": 0.2,
+      "amount_multiplier_vs_baseline": 8.0,
+      "n_cashout_points": 5,
+      "n_mules_layer1": 60
+    },
+    "adapted": {
+      "n_victims": 20,
+      "mule_age_days": 45,
+      "split_factor": 15,
+      "dwell_time_hours": 6.0,
+      "amount_multiplier_vs_baseline": 8.0,
+      "n_cashout_points": 20,
+      "n_mules_layer1": 120
+    }
+  },
+  "experiments": {
+    "round_0": {
+      "precision": 0.9939024390243902,
+      "recall": 1.0,
+      "f1": 0.9969418960244648,
+      "auc_pr": 0.9999999999999999,
+      "roc_auc": 0.9999999999999999,
+      "recall_at_fpr_0.001": 1.0,
+      "fpr_at_recall_0.85": 0.0,
+      "threshold": 0.04903992254335598,
+      "rows": 1963,
+      "fraud_rows": 163
+    },
+    "adapted_frozen_detector": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "auc_pr": 0.476405046132799,
+      "roc_auc": 0.684898753894081,
+      "recall_at_fpr_0.001": 0.0,
+      "fpr_at_recall_0.85": 0.985,
+      "threshold": 0.04903992254335598,
+      "rows": 2442,
+      "fraud_rows": 642
+    },
+    "adapted_retrained_old_features": {
+      "precision": 0.9953488372093023,
+      "recall": 1.0,
+      "f1": 0.9976689976689976,
+      "auc_pr": 0.9999805748976366,
+      "roc_auc": 0.9999930771893388,
+      "recall_at_fpr_0.001": 0.9968847352024922,
+      "fpr_at_recall_0.85": 0.0,
+      "threshold": 0.027817029052999973,
+      "rows": 2442,
+      "fraud_rows": 642
+    },
+    "adapted_durable_features": {
+      "precision": 0.9953488372093023,
+      "recall": 1.0,
+      "f1": 0.9976689976689976,
+      "auc_pr": 1.0,
+      "roc_auc": 1.0,
+      "recall_at_fpr_0.001": 1.0,
+      "fpr_at_recall_0.85": 0.0,
+      "threshold": 0.003310450761504593,
+      "rows": 2442,
+      "fraud_rows": 642
+    }
+  },
+  "signal_auc": {
+    "round_0": {
+      "a1_benef_account_age_days": 0.9891462167689162,
+      "a1_benef_fanin_24h": 0.7249573960463531,
+      "a1_dissipation_ratio": 0.8159509202453987,
+      "a1_payer_amount_zscore": 0.7169001363326516,
+      "a1_payee_added_to_transfer_seconds": 0.5122222222222222
+    },
+    "adapted": {
+      "a1_benef_account_age_days": 0.9622222222222222,
+      "a1_benef_fanin_24h": 0.7229447905849774,
+      "a1_dissipation_ratio": 0.7336448598130841,
+      "a1_payer_amount_zscore": 0.6307255970924195,
+      "a1_payee_added_to_transfer_seconds": 0.5122222222222222,
+      "a1_component_size": 1.0,
+      "a1_component_dissipation": 0.7474342332987193,
+      "a1_cashout_convergence": 1.0,
+      "a1_component_age_variance": 0.9458670820353063,
+      "a1_call_active": 0.5327102803738317,
+      "a1_session_duration_anomaly": 0.6950947559709242
+    }
+  },
+  "infrastructure": {
+    "round_0": {
+      "mules": 80,
+      "cashout_points": 5,
+      "cashout_value": 17084.96,
+      "utility": 0.06038831847423368
+    },
+    "adapted": {
+      "mules": 320,
+      "cashout_points": 20,
+      "cashout_value": 15833.94,
+      "utility": 0.011592873435258168
+    }
+  }
+}

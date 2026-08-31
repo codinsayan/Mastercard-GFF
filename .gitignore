@@ -7,5 +7,9 @@ pytest-cache-files-*/
 .coverage
 data/raw/
 data/processed/
+!data/processed/
+data/processed/*
+!data/processed/sparkov_reference.parquet
 results/round_*/
 *.parquet
+!data/processed/sparkov_reference.parquet

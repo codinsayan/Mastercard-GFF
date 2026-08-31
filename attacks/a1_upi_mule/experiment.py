@@ -112,8 +112,11 @@ def _load_external_reference(path: Path, *, seed: int = 42) -> tuple[pd.DataFram
     normalized = normalized.reset_index(drop=True)
     provenance = _reference_provenance(path, normalized, source_rows)
     provenance["format"] = (
-        "IEEE-CIS" if amount_name == "TransactionAmt" else "Sparkov"
-        if amount_name == "amt" else "normalized"
+        "IEEE-CIS"
+        if amount_name == "TransactionAmt"
+        else "Sparkov"
+        if amount_name == "amt" or "sparkov" in path.name.lower()
+        else "normalized"
     )
     provenance["amount_column"] = amount_name
     provenance["category_column"] = category_name or "UNKNOWN"

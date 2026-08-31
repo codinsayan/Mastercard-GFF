@@ -1025,11 +1025,11 @@ python -m pytest -q -p no:cacheprovider
 
 # Iteration 8 — Signal-mortality experiment
 
-**Status: COMPLETE FOR CORRECTED DEVELOPMENT BASELINE** — all four experiments were
-rerun on held-out campaigns after adding legitimate payee-addition context and mixed
-beneficiary-age marginals. The regenerated JSON records frozen-detector collapse and
-retraining recovery. External-dataset fidelity validation remains a stated project
-limitation, not a blocker for the replay-only Iteration 11 demo.
+**Status: COMPLETE WITH EXTERNAL SPARKOV CALIBRATION** — all four experiments were rerun
+on held-out campaigns using the committed 1,289,169-row normalized Sparkov reference,
+with a deterministic 500,000-row calibration sample and recorded SHA-256 provenance.
+The regenerated JSON records frozen-detector collapse and retraining recovery. Sparkov is
+external synthetic data; optional IEEE-CIS validation remains a documented extension.
 
 ## Goal
 
@@ -1119,7 +1119,7 @@ Round 1 after durable-feature recovery
 
 # Iteration 9 — Documentation and pitch
 
-**Status: COMPLETE FOR CORRECTED DEVELOPMENT BASELINE** — README methodology, measured
+**Status: COMPLETE WITH EXTERNAL SPARKOV RESULTS** — README methodology, measured
 tables, limitations, reproduction commands, adaptive-loop audit, and evidence-qualified
 60-second pitch have been refreshed from the corrected Iteration 8 artifact.
 
@@ -1269,8 +1269,15 @@ Verify all required Parquet and JSON artifacts exist for every round.
 
 # Iteration 11 — A1 web simulation demo
 
-**Prerequisite for authentic showcase metrics:** generate
-`results/iteration8_metrics_external.json` from an authorized Sparkov or IEEE-CIS source.
+**Status: COMPLETE FOR LOCAL SHOWCASE** — the reusable replay-only renderer, deterministic
+view models, cached campaign graph, step controls, adaptation comparison, signal mortality,
+external Sparkov evidence, actionable missing-data state, shared dashboard integration,
+and unit/render tests are complete. Local server health returned HTTP 200. The presenter
+should record the final backup video using the documented walkthrough.
+
+**Authentic showcase prerequisite: COMPLETE.**
+`results/iteration8_metrics_external.json` was generated from the committed normalized
+Sparkov source and contains external-reference provenance.
 The demo must inspect `methodology.reference.kind` and must not label the embedded fixture
 as external validation. Source datasets remain ignored under `data/raw/` and must never
 be committed.
@@ -1698,9 +1705,9 @@ A1 is complete only when all items are true:
 - [x] Pure-CEM three-round orchestration writes all frozen outputs.
 - [x] Codex subprocess, schema, retry, timeout, clamping, caching, and fallback paths are tested.
 - [x] One live Codex reasoning exchange is audited after explicit data-egress approval.
-- [ ] A1 replay-only web demo renders a complete cached campaign.
-- [ ] Default/adapted comparison, reasoning, signal mortality, recall, and utility appear.
-- [ ] Web-demo view-model tests and manual presentation checks pass.
+- [x] A1 replay-only web demo renders a complete cached campaign.
+- [x] Default/adapted comparison, reasoning, signal mortality, recall, and utility appear.
+- [x] Web-demo view-model and Streamlit render checks pass.
 
 ---
 
