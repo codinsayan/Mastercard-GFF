@@ -84,3 +84,62 @@ result rather than replacing it with the expected narrative.
 
 This remains a small synthetic benchmark. It is not the Phase-3 fidelity proof, uses no external
 dataset, and should not be presented as production detection efficacy.
+
+## Presentation artifacts
+
+Generate four deterministic, offline SVG charts plus their machine-readable source data with:
+
+```powershell
+python -m attacks.a3_card_testing.presentation
+```
+
+Outputs are under `results/presentation/`:
+
+- `round_metrics.svg` — active recall/ROC AUC and frozen previous-head recall;
+- `throughput.svg` — measured 40 → 12 → 4 cards/hour;
+- `signal_mortality.svg` — all nine feature AUCs across three rounds;
+- `bin_clustering.svg` — configured dominant-BIN share, normalized BIN entropy, and measured BIN
+  co-occurrence AUC; and
+- `presentation.json` — the exact values used by every chart.
+
+The BIN chart is intentionally honest: the adaptations acquired more dumps and reduced raw BIN
+concentration, while `a3_bin_cooccurrence_score` retained direction-normalized AUC 0.787084 in
+Round 1 and 0.732964 in Round 2.
+
+## Phase-3 fidelity methodology
+
+The A3 fidelity runner accepts a local Sparkov or IEEE-CIS transaction file, filters labeled fraud
+rows when the source provides a label, takes a deterministic bounded sample, fits
+`BasePopulation` to its amount/category reference, and compares card-channel synthetic rows using:
+
+- exact two-sample KS statistics for amount, log amount, hour, weekday, and category frequency;
+- root-mean-square distance between the two Pearson correlation matrices; and
+- a deterministic LightGBM discriminator with a stratified holdout, where synthetic is the
+  positive class.
+
+No real dataset currently exists under `data/`. Consequently, root `results/fidelity.json` records
+`status: blocked_no_dataset` and null metrics—no external result has been invented. Supplying a
+dataset replaces that status with measured statistics, dataset SHA-256, sample counts, correlation
+matrices, discriminator AUC, and feature importance.
+
+Sparkov:
+
+```powershell
+python -m attacks.a3_card_testing.fidelity --dataset "data/raw/fraudTrain.csv" --format sparkov --output "results/fidelity.json"
+```
+
+IEEE-CIS:
+
+```powershell
+python -m attacks.a3_card_testing.fidelity --dataset "data/raw/train_transaction.csv" --format ieee-cis --output "results/fidelity.json"
+```
+
+Either command also accepts a directory containing the conventional filename. Use `--max-rows`
+to change the default deterministic 50,000-row cap and `--seed` to change the default seed of 42.
+
+## Shared orchestrator status
+
+The shared `loop/run_rounds.py` remains an intentional Phase-0 stub and has no attack execution or
+artifact-writing hook. A3 does not redesign it. The exact integration boundary and future steps are
+documented in `ORCHESTRATOR_INTEGRATION.md`; all A3 evaluation, presentation, and fidelity commands
+run independently today.

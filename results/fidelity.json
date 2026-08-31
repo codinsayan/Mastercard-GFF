@@ -1,0 +1,11 @@
+{
+  "correlation_matrix_distance": null,
+  "discriminator": null,
+  "ks_statistics": null,
+  "reason": "No local Sparkov or IEEE-CIS transaction dataset was supplied; external-data metrics were not computed.",
+  "status": "blocked_no_dataset",
+  "supported_datasets": [
+    "sparkov",
+    "ieee-cis"
+  ]
+}
