@@ -175,17 +175,18 @@ class A3Generator:
     def utility(self, df: pd.DataFrame) -> float:
         if not isinstance(df, pd.DataFrame):
             raise TypeError("df must be a pandas DataFrame")
-        required = {"attack_id", "label", "auth_result", "card_id"}
+        required = {"attack_id", "label", "auth_result", "card_id", "timestamp"}
         missing = required.difference(df.columns)
         if missing:
             raise ValueError(f"Missing utility columns: {sorted(missing)}")
-        approved = df.loc[
-            df["attack_id"].eq(self.attack_id)
-            & df["label"].eq(1)
-            & df["auth_result"].eq("APPROVED"),
-            "card_id",
-        ].nunique()
-        return float(np.clip(approved / MAX_CARDS_PER_HOUR, 0.0, 1.0))
+        attack_rows = df.loc[df["attack_id"].eq(self.attack_id) & df["label"].eq(1)]
+        approved = attack_rows.loc[attack_rows["auth_result"].eq("APPROVED"), "card_id"].nunique()
+        elapsed_hours = 0.0
+        timestamps = attack_rows["timestamp"].dropna()
+        if not timestamps.empty:
+            elapsed_hours = (timestamps.max() - timestamps.min()).total_seconds() / 3600
+        validated_cards_per_hour = approved / max(elapsed_hours, 1.0)
+        return float(np.clip(validated_cards_per_hour / MAX_CARDS_PER_HOUR, 0.0, 1.0))
 
     def _validated_params(self, params: dict) -> dict[str, int | float]:
         if not isinstance(params, dict):

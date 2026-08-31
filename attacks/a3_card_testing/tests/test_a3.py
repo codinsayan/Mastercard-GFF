@@ -192,13 +192,36 @@ def test_mixed_round_population_is_rejected(population):
         A3Generator().generate(_params(), mixed, seed=1)
 
 
-def test_utility_counts_distinct_approved_a3_cards_and_clips():
+def test_utility_counts_distinct_approved_a3_cards_per_elapsed_campaign_hour():
     events = pd.DataFrame(
         {
-            "attack_id": ["A3", "A3", "A3", "LEGIT"],
-            "label": [1, 1, 1, 0],
-            "auth_result": ["APPROVED", "APPROVED", "DECLINED", "APPROVED"],
-            "card_id": ["c1", "c1", "c2", "c3"],
+            "attack_id": ["A3", "A3", "A3", "A3", "LEGIT"],
+            "label": [1, 1, 1, 1, 0],
+            "auth_result": ["APPROVED", "APPROVED", "APPROVED", "DECLINED", "APPROVED"],
+            "card_id": ["c1", "c1", "c2", "c3", "c4"],
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-01 00:00:00",
+                    "2026-01-01 00:10:00",
+                    "2026-01-01 02:00:00",
+                    "2026-01-01 01:00:00",
+                    "2025-01-01 00:00:00",
+                ]
+            ),
         }
     )
     assert A3Generator().utility(events) == pytest.approx(1 / 60)
+
+
+def test_utility_uses_one_hour_floor_and_clips_to_unit_interval():
+    events = pd.DataFrame(
+        {
+            "attack_id": ["A3"] * 61,
+            "label": [1] * 61,
+            "auth_result": ["APPROVED"] * 61,
+            "card_id": [f"c{index}" for index in range(61)],
+            "timestamp": pd.to_datetime(["2026-01-01 00:00:00"] * 61),
+        }
+    )
+
+    assert A3Generator().utility(events) == 1.0

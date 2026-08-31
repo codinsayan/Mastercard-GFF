@@ -1,0 +1,75 @@
+{
+  "cem_seed_params": {
+    "amount_max": 300,
+    "amount_min": 150,
+    "cards_per_device": 1,
+    "cards_per_hour": 4,
+    "decline_rate": 0.5,
+    "merchant_friction_mix": 0.15,
+    "n_bins": 4,
+    "n_merchants": 24
+  },
+  "evaluated_candidates": 48,
+  "objective": "minimize frozen-detector fraud risk subject to the target-throughput, utility, and amount-KS constraints",
+  "proposal": {
+    "hypotheses": [
+      {
+        "action": "Set cards_per_hour to 4 and expand n_merchants to 24.",
+        "cost_to_attacker": "Validation throughput falls by 60% from the current campaign, while a larger usable merchant pool must be maintained.",
+        "signal_targeted": "a3_merchant_micro_txn_rate_1h and a3_merchant_set_jaccard"
+      },
+      {
+        "action": "Keep cards_per_device at 1.",
+        "cost_to_attacker": "Every distinct card requires separate synthetic fingerprint coordination.",
+        "signal_targeted": "a3_device_card_fanin_1h"
+      },
+      {
+        "action": "Raise and widen the amount range to 150 through 300.",
+        "cost_to_attacker": "Successful authorizations carry greater modeled loss exposure and cardholder visibility.",
+        "signal_targeted": "a3_amount_percentile"
+      },
+      {
+        "action": "Use 4 BIN clusters for 4 primary cards.",
+        "cost_to_attacker": "Requires mixing inventory from several breach dumps and leaves less usable volume per source.",
+        "signal_targeted": "a3_bin_cooccurrence_score and a3_bin_entropy_1h"
+      },
+      {
+        "action": "Reduce merchant_friction_mix to 0.15.",
+        "cost_to_attacker": "Restricts the usable merchant mix and may make merchant selection less diverse.",
+        "signal_targeted": "a3_decline_retry_pattern and a3_merchant_friction_score"
+      },
+      {
+        "action": "Lower decline_rate to the permitted minimum of 0.5.",
+        "cost_to_attacker": "Requires higher-quality and more expensive synthetic card inventory.",
+        "signal_targeted": "Validation utility under reduced throughput"
+      },
+      {
+        "action": "Accept this signal as a residual control because no supplied parameter directly creates legitimate prior card history.",
+        "cost_to_attacker": "Detector risk cannot be fully reduced without leaving the authorized parameter space.",
+        "signal_targeted": "a3_card_first_seen_recency"
+      }
+    ],
+    "proposed_params": {
+      "amount_max": 300,
+      "amount_min": 150,
+      "cards_per_device": 1,
+      "cards_per_hour": 4,
+      "decline_rate": 0.5,
+      "merchant_friction_mix": 0.15,
+      "n_bins": 4,
+      "n_merchants": 24
+    },
+    "reasoning": "At the four-card economic target, test whether sparse distribution, one-card device rotation, broader non-micro amounts, and near one-BIN-per-card diversity reduce the strongest observable concentrations. Keep merchant friction low to limit decline-driven retries, and use the lowest permitted dead-card rate to preserve validation utility. First-seen recency remains largely unavoidable within this parameter space, while greater BIN diversity is the most expensive modeled adaptation."
+  },
+  "refined_params": {
+    "amount_max": 300,
+    "amount_min": 150,
+    "cards_per_device": 1,
+    "cards_per_hour": 4,
+    "decline_rate": 0.5,
+    "merchant_friction_mix": 0.15,
+    "n_bins": 4,
+    "n_merchants": 24
+  },
+  "target_cards_per_hour": 4
+}
