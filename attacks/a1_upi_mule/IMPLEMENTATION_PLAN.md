@@ -15,10 +15,13 @@ attacks/a1_upi_mule/
 ├── generator.py
 ├── features.py
 ├── detector.py
+├── demo.py
+├── demo_data.py
 ├── README.md
 ├── IMPLEMENTATION_PLAN.md
 └── tests/
-    └── test_a1.py
+    ├── test_a1.py
+    └── test_demo.py
 ```
 
 Do not modify `core/`, `redteam/`, `loop/`, shared tests, or another person's attack
@@ -619,6 +622,10 @@ as `current_params`.
 
 # Iteration 4 — Round-0 feature block
 
+**Status: COMPLETE** — implemented with five finite numeric features, strict prior-only
+fanin and payer-history windows, an explicitly delayed one-hour dissipation signal,
+safe payee-metadata parsing, input-order preservation, and hand-calculated unit tests.
+
 ## Goal
 
 Build leakage-aware features that detect the obvious default campaign.
@@ -729,6 +736,9 @@ legitimate/A1 events.
 
 # Iteration 5 — Baseline LightGBM detector
 
+**Status: COMPLETE** — implemented with deterministic LightGBM scoring, numeric feature
+sanitization, stable training-column alignment, and safe tiny/single-class fallbacks.
+
 ## Goal
 
 Provide a robust `DetectorHead` implementation and measure the default campaign.
@@ -822,6 +832,10 @@ The detector passes both local tests and the detector section of the shared cont
 
 # Iteration 6 — Round-1 graph and durable features
 
+**Status: COMPLETE** — implemented with indexed 48-hour local graph neighborhoods,
+two-hop component features, shared cash-out convergence, call-state extraction, and a
+strictly prior session-duration anomaly.
+
 ## Goal
 
 Recover detection after node-level features lose information under adapted parameters.
@@ -885,9 +899,9 @@ a1_component_dissipation
 
 For the beneficiary's local component:
 
-- inflow is value entering the component from outside;
-- outflow is value leaving the component to outside;
-- internal edges are not counted as external flow.
+- inflow is total value on observed edges entering nodes in the two-hop component;
+- outflow is total value on observed edges leaving nodes in the component;
+- boundary and internal movement are both retained to measure aggregate dissipation.
 
 Compute:
 
@@ -965,6 +979,9 @@ finite, documented in `card.json`, and verified on hand-built graphs.
 
 # Iteration 7 — Shared contract activation
 
+**Status: COMPLETE** — package exports are active and the frozen A1 integration test
+passes across generator, schema, features, card semantics, utility, state, and detector.
+
 ## Goal
 
 Turn the A1 shared test from skipped into passed.
@@ -1007,6 +1024,11 @@ python -m pytest -q -p no:cacheprovider
 ---
 
 # Iteration 8 — Signal-mortality experiment
+
+**Status: IMPLEMENTED; FINAL RERUN REQUIRED** — the reproducible four-experiment pipeline
+and measured JSON artifact are complete. The development run exposed payee-metadata and
+beneficiary-age shortcuts, so final signal-mortality claims remain blocked on a real
+reference dataset and realistic legitimate metadata enrichment.
 
 ## Goal
 
@@ -1096,6 +1118,10 @@ Round 1 after durable-feature recovery
 
 # Iteration 9 — Documentation and pitch
 
+**Status: COMPLETE FOR DEVELOPMENT BASELINE** — README, methodology, measured tables,
+limitations, reproduction commands, and an evidence-qualified 60-second pitch are in
+place. Numeric tables must be refreshed after the final Iteration 8 rerun.
+
 ## Goal
 
 Make the A1 result reproducible and understandable to technical and non-technical judges.
@@ -1116,6 +1142,7 @@ Make the A1 result reproducible and understandable to technical and non-technica
 12. Known limitations.
 13. Reproduction commands.
 14. The 60-second pitch.
+15. Web-demo launch, artifact, and fallback instructions.
 
 ## Signal-mortality table
 
@@ -1233,6 +1260,329 @@ Verify all required Parquet and JSON artifacts exist for every round.
 
 ---
 
+# Iteration 11 — A1 web simulation demo
+
+## Goal
+
+Create a judge-facing, replay-only web experience that explains the A1 attack and the
+closed-loop defense visually. The demo must simulate the movement of synthetic payments
+through the generated graph without contacting a payment system, invoking Codex, training
+a model, or regenerating a large dataset during the presentation.
+
+The web demo is a visualization of precomputed synthetic artifacts, not operational
+payment tooling.
+
+## Ownership and integration boundary
+
+Build the reusable A1 page inside the owned folder:
+
+```text
+attacks/a1_upi_mule/
+├── demo.py                 # reusable Streamlit page renderer
+├── demo_data.py            # validation and replay-data preparation
+├── assets/                 # optional small local explanatory assets
+└── tests/
+    └── test_demo.py        # data/view-model tests without starting a web server
+```
+
+The shared `app/dashboard.py` is owned by the integration team. Do not edit it during
+individual attack work. At integration time, it should import and call a function such
+as:
+
+```python
+from attacks.a1_upi_mule.demo import render_a1_demo
+
+render_a1_demo(results_root="results")
+```
+
+Keep Streamlit calls in `demo.py`. Put deterministic data transformations in
+`demo_data.py` so they can be unit-tested without a browser.
+
+## Required precomputed inputs
+
+The page should read only artifacts produced by completed rounds:
+
+```text
+results/round_0/events.parquet
+results/round_0/features.parquet
+results/round_0/scores.parquet
+results/round_0/metrics.json
+results/round_1/events.parquet
+results/round_1/features.parquet
+results/round_1/scores.parquet
+results/round_1/metrics.json
+results/round_1/redteam_reasoning.json
+```
+
+Round 2 may be shown when available, but the A1 story must work with Rounds 0 and 1.
+
+Never call these from the page-rendering path:
+
+- `A1Generator.generate()` at full scale;
+- `A1Detector.fit()`;
+- CEM search;
+- `codex exec`;
+- an LLM API;
+- a bank, UPI, or external payment endpoint.
+
+For development only, a separate explicit command may generate a tiny local demo fixture.
+The judging path must use cached files.
+
+## Demo narrative
+
+The page should tell one coherent story in this order:
+
+1. The victim is on a deepfake coercion call.
+2. The victim uses their genuine device and authorizes a UPI payment.
+3. Authentication signals remain clean.
+4. Funds enter a new layer-1 mule.
+5. The mule fans funds across layer-2 accounts.
+6. Layer-2 accounts reconverge on shared cash-out points.
+7. The Round-0 detector catches the obvious topology.
+8. The red agent pre-ages mules, widens splitting, and increases dwell time.
+9. Round-0 signals lose AUC and recall falls.
+10. Component and payer-behavior signals recover detection.
+11. Evasion reduces attacker utility and increases infrastructure cost.
+
+## Page layout
+
+### Section 1 — Scenario and safety framing
+
+Display:
+
+- attack name;
+- one-sentence explanation;
+- `UPI_P2P` channel;
+- clear “synthetic authorized simulation” badge;
+- explanation that the victim's device, PIN, and authorization are genuine;
+- statement that no real personal or payment information is used.
+
+### Section 2 — Campaign controls
+
+Provide controls that select cached data rather than regenerate it:
+
+- round selector;
+- campaign selector;
+- replay speed;
+- play/pause or step control;
+- optional “default vs adapted” comparison toggle.
+
+Do not expose arbitrary attack parameter entry during judging. Show the cached round
+parameters as read-only values. This keeps the demo reproducible and prevents an
+unsupported combination from breaking the presentation.
+
+### Section 3 — Animated money-flow graph
+
+Render a directed graph with node categories:
+
+| Node type | Visual role |
+|---|---|
+| Victim | origin of coerced transfer |
+| Layer-1 mule | first receiving accounts |
+| Layer-2 mule | spreading accounts |
+| Cash-out | reconvergence destinations |
+
+Recommended encodings:
+
+- node color by role;
+- node size by total value handled;
+- edge thickness by amount;
+- edge appearance by replay timestamp;
+- selected edge annotation with amount and elapsed time;
+- fraud-risk border or glow driven by cached score.
+
+Use Plotly or a small deterministic layout. NetworkX may compute node positions offline
+or in the view-model layer, but positions must be seeded and stable so the graph does not
+jump between reruns.
+
+Avoid rendering an entire large campaign. Build a representative bounded subgraph with:
+
+- one selected victim or campaign;
+- a configurable maximum node count;
+- deterministic top-value or earliest-path selection;
+- an explicit notice when the graph is sampled.
+
+### Section 4 — Event replay timeline
+
+Show transaction stages in chronological order:
+
+```text
+PAYEE ADDED → VICTIM PAYMENT → L1 DWELL → L1 FAN-OUT → L2 CASH-OUT
+```
+
+For each replay step show:
+
+- synthetic event ID;
+- relative elapsed time rather than sensitive exact timestamps when preferred;
+- rounded amount;
+- source/destination role;
+- whether a call was active;
+- beneficiary account age;
+- cached detector score;
+- detector decision at the configured threshold.
+
+The page may use Streamlit session state to advance a replay cursor. Do not use a
+blocking sleep loop that freezes the app. A step button is the safest fallback for the
+live presentation.
+
+### Section 5 — What the payment system sees
+
+Show two side-by-side panels:
+
+```text
+Payer side                         Receiver/network side
+Registered customer: valid        New/linked beneficiary
+Known device: valid               Multi-sender fan-in
+Authorization: valid              Rapid or coordinated movement
+Location/network: normal          Shared cash-out convergence
+```
+
+This is the emotional and technical explanation of why conventional authentication does
+not solve coerced authorized-payment fraud.
+
+### Section 6 — Default versus adapted attack
+
+Compare cached Round-0 and Round-1 parameters:
+
+| Parameter | Round 0 | Adapted round | Attacker cost |
+|---|---:|---:|---|
+| Mule age | cached | cached | aged accounts cost more |
+| Split factor | cached | cached | more mules to acquire |
+| Dwell time | cached | cached | longer freeze exposure |
+| Cash-out points | cached | cached | expensive infrastructure |
+
+Render the natural-language reasoning from `redteam_reasoning.json` beside the measured
+recall drop it caused. Never invoke the reasoner from the demo.
+
+### Section 7 — Signal mortality
+
+Show a compact heatmap or table of measured per-feature AUC by round:
+
+- fragile signals fade toward `0.5`;
+- dead signals are visibly marked;
+- component and durable signals appear in the recovery round;
+- illustrative values must never be substituted for missing measured results.
+
+### Section 8 — Defender and attacker outcomes
+
+Display cached metrics:
+
+- recall;
+- precision;
+- AUC-PR;
+- recall at FPR `0.001`;
+- attacker utility;
+- number of mules;
+- number of cash-out points;
+- total cash-out value.
+
+The final visual should connect recovered recall with reduced attacker utility.
+
+## View-model functions
+
+Implement testable functions in `demo_data.py`, for example:
+
+```python
+def load_round_artifacts(results_root: Path, round_number: int) -> RoundArtifacts: ...
+def validate_artifacts(artifacts: RoundArtifacts) -> None: ...
+def list_a1_campaigns(events: pd.DataFrame) -> list[str]: ...
+def campaign_events(events: pd.DataFrame, campaign_id: str) -> pd.DataFrame: ...
+def build_replay_steps(events: pd.DataFrame, scores: pd.DataFrame) -> pd.DataFrame: ...
+def build_campaign_graph(events: pd.DataFrame, max_nodes: int = 80) -> GraphViewModel: ...
+def build_round_comparison(metrics_by_round: dict[int, dict]) -> pd.DataFrame: ...
+def build_signal_mortality(metrics_by_round: dict[int, dict]) -> pd.DataFrame: ...
+```
+
+Use dataclasses or typed dictionaries to make missing artifact fields fail with clear
+messages rather than obscure Streamlit exceptions.
+
+## Missing-data behavior
+
+The page must fail gracefully when artifacts are incomplete:
+
+- show which file is missing;
+- explain which precomputation command produces it;
+- keep the scenario explanation visible;
+- do not fabricate scores or metrics;
+- do not silently fall back to live generation or training.
+
+## Performance and caching
+
+Use Streamlit resource/data caching for read-only artifacts where appropriate. Cache
+using the file path and modification time so updated results invalidate stale views.
+
+Only load A1 rows and required columns for the selected round. Use DuckDB or PyArrow
+filters when the full Parquet file is large.
+
+Target interaction performance after initial load:
+
+- campaign selection under one second;
+- replay-step update under 250 ms;
+- bounded graph below approximately 100 visible nodes;
+- no uncontrolled memory growth across Streamlit reruns.
+
+## Accessibility and presentation resilience
+
+- Do not rely on red/green alone; use labels and icons as well as color.
+- Format Indian currency consistently, for example `₹2.40 lakh` and `₹80,000`.
+- Keep text readable on a projector.
+- Provide a step-through mode if animation timing fails.
+- Include a reset button.
+- Use stable deterministic graph positions.
+- Keep a pre-recorded screen capture as a presentation fallback after the page is final.
+
+## Demo tests
+
+Unit tests should verify:
+
+- artifact validation reports missing files and columns clearly;
+- only A1 rows are selected;
+- campaign ordering is deterministic;
+- replay steps are chronologically ordered;
+- graph edges correspond to generated transfers;
+- node roles come from safe A1 metadata extraction;
+- graph sampling is deterministic and respects `max_nodes`;
+- scores join by `event_id`, not row position;
+- missing scores remain visibly unavailable rather than becoming zero risk;
+- signal-mortality data uses measured metrics only;
+- malformed metadata cannot crash the view-model layer;
+- no test requires a network connection or browser.
+
+## Manual browser verification
+
+After unit tests pass:
+
+1. start Streamlit locally;
+2. open the A1 page;
+3. test default and adapted campaigns;
+4. step through a complete flow;
+5. verify graph labels and amounts;
+6. resize to the expected presentation resolution;
+7. test missing-artifact behavior;
+8. verify no terminal output indicates model training, Codex execution, or network calls;
+9. rehearse the 60-second narration while driving the page.
+
+Suggested integration command:
+
+```powershell
+streamlit run app/dashboard.py
+```
+
+## Exit criteria
+
+- A1 has a reusable Streamlit renderer inside its owned folder.
+- The shared dashboard can call it with one import and one function call.
+- The page reads only precomputed synthetic artifacts.
+- A selected campaign visibly progresses through all three transfer stages.
+- Default and adapted rounds can be compared.
+- Red-agent reasoning, signal mortality, recall, and utility are shown together.
+- Missing data produces an actionable message rather than a crash.
+- View-model unit tests pass without launching Streamlit.
+- Manual browser verification passes at presentation resolution.
+- A step-through fallback and recorded backup are available.
+
+---
+
 ## 4. Suggested local test organization
 
 Organize `tests/test_a1.py` into clear sections or classes:
@@ -1249,6 +1599,7 @@ TestDescribeState
 TestRound0Features
 TestGraphFeatures
 TestDetector
+TestDemoData
 TestRegressionCases
 ```
 
@@ -1311,26 +1662,29 @@ Realism checks should include:
 
 A1 is complete only when all items are true:
 
-- [ ] `card.json` contains defaults, ranges, semantics, and all defender signals.
+- [x] `card.json` contains defaults, ranges, semantics, and all defender signals.
 - [x] `generator.py` creates all three transfer stages.
 - [x] Generation is deterministic for a fixed input and seed.
 - [x] Generated rows pass the frozen schema validator.
 - [x] Causal time and money-conservation tests pass.
 - [x] `utility()` is finite, bounded, and penalizes infrastructure expansion.
 - [x] `describe_state()` returns exactly the four required keys.
-- [ ] All eleven canonical A1 features are implemented and prefixed.
-- [ ] Feature calculations have hand-verified unit tests.
-- [ ] `A1Detector` fits and scores through the frozen interface.
-- [ ] Package exports activate the shared contract.
-- [ ] `pytest tests/test_contract.py -k a1` passes rather than skips.
-- [ ] Full repository tests and A1 lint checks pass.
-- [ ] Round-0 metrics are measured on held-out campaigns.
-- [ ] Adapted-attack recall collapse is measured.
-- [ ] Old-feature-only retraining is measured.
-- [ ] Durable-feature recovery is measured.
-- [ ] README contains real signal-mortality numbers.
-- [ ] Attacker utility and infrastructure cost are reported.
-- [ ] The 60-second non-technical explanation is ready.
+- [x] All eleven canonical A1 features are implemented and prefixed.
+- [x] Feature calculations have hand-verified unit tests.
+- [x] `A1Detector` fits and scores through the frozen interface.
+- [x] Package exports activate the shared contract.
+- [x] `pytest tests/test_contract.py -k a1` passes rather than skips.
+- [x] Full repository tests and A1 lint checks pass.
+- [x] Round-0 development metrics are measured on held-out campaign seeds.
+- [x] Adapted frozen-detector behavior is measured (no collapse occurred; shortcut documented).
+- [x] Old-feature-only retraining is measured.
+- [x] Durable-feature behavior is measured (final recovery claim awaits corrected rerun).
+- [x] README contains actual development signal AUCs and explicitly labels their limitations.
+- [x] Attacker utility and infrastructure cost are reported.
+- [x] The 60-second non-technical explanation is ready and evidence-qualified.
+- [ ] A1 replay-only web demo renders a complete cached campaign.
+- [ ] Default/adapted comparison, reasoning, signal mortality, recall, and utility appear.
+- [ ] Web-demo view-model tests and manual presentation checks pass.
 
 ---
 
@@ -1350,6 +1704,7 @@ Iteration 7  Shared contract activation
 Iteration 8  Signal-mortality experiments
 Iteration 9  README and pitch
 Iteration 10 Shared Phase 3 loop and red agent
+Iteration 11 A1 replay-only web simulation demo
 ```
 
 The first implementation milestone should be a tiny deterministic campaign that passes

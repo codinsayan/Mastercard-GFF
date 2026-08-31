@@ -1,20 +1,34 @@
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
+from attacks.a1_upi_mule.detector import A1Detector
+from attacks.a1_upi_mule.experiment import _metrics, _signal_auc
+from attacks.a1_upi_mule.features import A1Features
 from attacks.a1_upi_mule.generator import A1Generator
 from core.population import BasePopulation, PopulationConfig
-from core.schema import validate
+from core.schema import coerce, validate
 
 
 @pytest.fixture
 def generator() -> A1Generator:
     return A1Generator()
+
+
+@pytest.fixture
+def feature_block() -> A1Features:
+    return A1Features()
+
+
+@pytest.fixture
+def detector() -> A1Detector:
+    return A1Detector()
 
 
 @pytest.fixture
@@ -365,3 +379,552 @@ def test_describe_state_rejects_invalid_parameters(generator):
     params["unknown"] = 1
     with pytest.raises(ValueError, match="unknown"):
         generator.describe_state(params)
+
+
+def _feature_events(rows: list[dict]) -> pd.DataFrame:
+    defaults = {
+        "attack_id": "LEGIT",
+        "label": 0,
+        "round": 0,
+        "customer_account_age_days": 500,
+        "device_id": "device",
+        "ip_asn": "AS100",
+        "session_id": "session",
+        "session_duration_s": 120,
+        "channel": "UPI_P2P",
+        "card_id": "",
+        "card_bin": "",
+        "vpa": "payer@bank",
+        "token_id": "",
+        "counterparty_type": "BENEFICIARY",
+        "counterparty_mcc": "",
+        "counterparty_account_age_days": 100,
+        "is_first_time_payee": 0,
+        "auth_result": "APPROVED",
+        "decline_code": "",
+        "meta": {},
+    }
+    return coerce(pd.DataFrame([{**defaults, **row} for row in rows]))
+
+
+def test_round0_feature_contract_and_input_order(feature_block):
+    events = _feature_events(
+        [
+            {
+                "event_id": "later",
+                "timestamp": "2026-01-02 10:00:00",
+                "customer_id": "payer-2",
+                "counterparty_id": "beneficiary",
+                "amount": 200.0,
+            },
+            {
+                "event_id": "earlier",
+                "timestamp": "2026-01-01 10:00:00",
+                "customer_id": "payer-1",
+                "counterparty_id": "beneficiary",
+                "amount": 100.0,
+            },
+        ]
+    )
+    features = feature_block.build(events)
+    assert list(features.index) == ["later", "earlier"]
+    assert features.index.name == "event_id"
+    assert list(features.columns) == feature_block.feature_names()
+    assert all(column.startswith("a1_") for column in features)
+    assert all(pd.api.types.is_float_dtype(features[column]) for column in features)
+    assert np.isfinite(features.to_numpy()).all()
+
+
+def test_beneficiary_fanin_uses_distinct_strictly_prior_24h_senders(feature_block):
+    events = _feature_events(
+        [
+            {
+                "event_id": "outside",
+                "timestamp": "2026-01-01 09:59:59",
+                "customer_id": "old-payer",
+                "counterparty_id": "mule",
+                "amount": 10.0,
+            },
+            {
+                "event_id": "first",
+                "timestamp": "2026-01-01 10:00:00",
+                "customer_id": "payer-a",
+                "counterparty_id": "mule",
+                "amount": 20.0,
+            },
+            {
+                "event_id": "repeat",
+                "timestamp": "2026-01-02 08:00:00",
+                "customer_id": "payer-a",
+                "counterparty_id": "mule",
+                "amount": 30.0,
+            },
+            {
+                "event_id": "score-me",
+                "timestamp": "2026-01-02 10:00:00",
+                "customer_id": "payer-b",
+                "counterparty_id": "mule",
+                "amount": 40.0,
+            },
+            {
+                "event_id": "future",
+                "timestamp": "2026-01-02 10:00:01",
+                "customer_id": "payer-c",
+                "counterparty_id": "mule",
+                "amount": 50.0,
+            },
+        ]
+    )
+    features = feature_block.build(events)
+    assert features.loc["first", "a1_benef_fanin_24h"] == 1.0
+    # The exact 24-hour boundary is included, the older row/future/current rows are not,
+    # and payer-a is counted once despite paying twice.
+    assert features.loc["score-me", "a1_benef_fanin_24h"] == 1.0
+
+
+def test_payer_amount_zscore_uses_only_prior_90_day_history(feature_block):
+    events = _feature_events(
+        [
+            {
+                "event_id": "history-1",
+                "timestamp": "2026-01-01 10:00:00",
+                "customer_id": "victim",
+                "counterparty_id": "shop-1",
+                "amount": 100.0,
+            },
+            {
+                "event_id": "history-2",
+                "timestamp": "2026-01-02 10:00:00",
+                "customer_id": "victim",
+                "counterparty_id": "shop-2",
+                "amount": 200.0,
+            },
+            {
+                "event_id": "coerced",
+                "timestamp": "2026-01-03 10:00:00",
+                "customer_id": "victim",
+                "counterparty_id": "mule",
+                "amount": 300.0,
+            },
+            {
+                "event_id": "future-outlier",
+                "timestamp": "2026-01-04 10:00:00",
+                "customer_id": "victim",
+                "counterparty_id": "other",
+                "amount": 10000.0,
+            },
+        ]
+    )
+    features = feature_block.build(events)
+    expected = (300.0 - 150.0) / np.std([100.0, 200.0], ddof=1)
+    assert features.loc["coerced", "a1_payer_amount_zscore"] == pytest.approx(expected)
+    assert features.loc["history-1", "a1_payer_amount_zscore"] == 0.0
+
+
+def test_dissipation_observes_only_beneficiary_outflow_in_next_hour(feature_block):
+    events = _feature_events(
+        [
+            {
+                "event_id": "inflow",
+                "timestamp": "2026-01-01 10:00:00",
+                "customer_id": "victim",
+                "counterparty_id": "mule",
+                "amount": 1000.0,
+            },
+            {
+                "event_id": "outflow-in-window",
+                "timestamp": "2026-01-01 10:30:00",
+                "customer_id": "mule",
+                "counterparty_id": "mule-2",
+                "amount": 600.0,
+            },
+            {
+                "event_id": "other-outflow",
+                "timestamp": "2026-01-01 10:40:00",
+                "customer_id": "someone-else",
+                "counterparty_id": "mule-3",
+                "amount": 500.0,
+            },
+            {
+                "event_id": "outflow-too-late",
+                "timestamp": "2026-01-01 11:00:01",
+                "customer_id": "mule",
+                "counterparty_id": "mule-4",
+                "amount": 300.0,
+            },
+        ]
+    )
+    features = feature_block.build(events)
+    assert features.loc["inflow", "a1_dissipation_ratio"] == pytest.approx(0.6)
+
+
+def test_payee_delay_parses_metadata_and_uses_neutral_zero_for_invalid_values(feature_block):
+    events = _feature_events(
+        [
+            {
+                "event_id": "valid",
+                "timestamp": "2026-01-01 10:01:00",
+                "customer_id": "victim-1",
+                "counterparty_id": "mule-1",
+                "amount": 100.0,
+                "meta": {"a1_payee_added_at": "2026-01-01T10:00:20"},
+            },
+            {
+                "event_id": "missing",
+                "timestamp": "2026-01-01 10:01:00",
+                "customer_id": "victim-2",
+                "counterparty_id": "mule-2",
+                "amount": 100.0,
+                "meta": {},
+            },
+            {
+                "event_id": "malformed",
+                "timestamp": "2026-01-01 10:01:00",
+                "customer_id": "victim-3",
+                "counterparty_id": "mule-3",
+                "amount": 100.0,
+                "meta": {"a1_payee_added_at": "not-a-date"},
+            },
+            {
+                "event_id": "future-added",
+                "timestamp": "2026-01-01 10:01:00",
+                "customer_id": "victim-4",
+                "counterparty_id": "mule-4",
+                "amount": 100.0,
+                "meta": {"a1_payee_added_at": "2026-01-01T10:02:00"},
+            },
+        ]
+    )
+    features = feature_block.build(events)
+    assert features.loc["valid", "a1_payee_added_to_transfer_seconds"] == 40.0
+    assert features.loc["missing", "a1_payee_added_to_transfer_seconds"] == 0.0
+    assert features.loc["malformed", "a1_payee_added_to_transfer_seconds"] == 0.0
+    assert features.loc["future-added", "a1_payee_added_to_transfer_seconds"] == 0.0
+
+
+def test_feature_block_handles_mixed_legitimate_and_generated_a1_events(
+    feature_block, generator, population
+):
+    fraud = generator.generate(generator.default_params(), population, seed=901)
+    mixed = pd.concat([population, fraud], ignore_index=True)
+    mixed = mixed.sort_values(["timestamp", "event_id"], kind="stable").reset_index(drop=True)
+    features = feature_block.build(mixed)
+    assert len(features) == len(mixed)
+    assert list(features.index) == mixed["event_id"].tolist()
+    assert np.isfinite(features.to_numpy()).all()
+
+
+def test_feature_block_rejects_duplicate_ids_and_invalid_amount(feature_block):
+    duplicate = _feature_events(
+        [
+            {
+                "event_id": "same",
+                "timestamp": "2026-01-01",
+                "customer_id": "a",
+                "counterparty_id": "b",
+                "amount": 1.0,
+            },
+            {
+                "event_id": "same",
+                "timestamp": "2026-01-02",
+                "customer_id": "c",
+                "counterparty_id": "d",
+                "amount": 1.0,
+            },
+        ]
+    )
+    with pytest.raises(ValueError, match="unique"):
+        feature_block.build(duplicate)
+    invalid = duplicate.head(1).copy()
+    invalid["event_id"] = "unique"
+    invalid["amount"] = 0.0
+    with pytest.raises(ValueError, match="positive"):
+        feature_block.build(invalid)
+
+
+def _detector_training_frame() -> tuple[pd.DataFrame, np.ndarray]:
+    rng = np.random.default_rng(123)
+    labels = np.tile(np.array([0, 1], dtype=np.int8), 20)
+    frame = pd.DataFrame(
+        {
+            "a1_signal": labels.astype(float) + rng.normal(0, 0.1, len(labels)),
+            "a1_noise": rng.normal(0, 1, len(labels)),
+        }
+    )
+    return frame, labels
+
+
+def test_detector_requires_fit_before_scoring(detector):
+    with pytest.raises(RuntimeError, match="fit"):
+        detector.score(pd.DataFrame({"a1_signal": [1.0]}))
+
+
+def test_detector_fit_score_contract(detector):
+    X, y = _detector_training_frame()
+    detector.fit(X, y)
+    scores = detector.score(X)
+    assert isinstance(scores, np.ndarray)
+    assert scores.dtype == np.float64
+    assert scores.shape == (len(X),)
+    assert np.isfinite(scores).all()
+    assert ((0.0 <= scores) & (scores <= 1.0)).all()
+    assert scores[y == 1].mean() > scores[y == 0].mean()
+
+
+def test_detector_scores_are_stable_under_column_reordering_and_extras(detector):
+    X, y = _detector_training_frame()
+    detector.fit(X, y)
+    expected = detector.score(X)
+    reordered = X[["a1_noise", "a1_signal"]].copy()
+    reordered["unexpected"] = 999.0
+    np.testing.assert_allclose(detector.score(reordered), expected)
+
+
+def test_detector_supplies_zero_for_missing_trained_columns(detector):
+    X, y = _detector_training_frame()
+    detector.fit(X, y)
+    missing = X.drop(columns="a1_noise")
+    scores = detector.score(missing)
+    assert scores.shape == (len(X),)
+    assert np.isfinite(scores).all()
+
+
+@pytest.mark.parametrize("label", [0, 1])
+def test_detector_single_class_uses_constant_prior(detector, label):
+    X = pd.DataFrame({"a1_signal": [0.0, 1.0, 2.0, 3.0]})
+    y = np.full(len(X), label, dtype=np.int8)
+    detector.fit(X, y)
+    np.testing.assert_array_equal(detector.score(X), np.full(len(X), float(label)))
+
+
+def test_detector_tiny_frame_uses_safe_prior(detector):
+    X = pd.DataFrame({"a1_signal": [0.0, 1.0]})
+    detector.fit(X, np.array([0, 1], dtype=np.int8))
+    np.testing.assert_array_equal(detector.score(X), np.array([0.5, 0.5]))
+
+
+def test_detector_sanitizes_nan_and_infinity(detector):
+    X, y = _detector_training_frame()
+    X.loc[0, "a1_signal"] = np.nan
+    X.loc[1, "a1_signal"] = np.inf
+    detector.fit(X, y)
+    scores = detector.score(X)
+    assert np.isfinite(scores).all()
+
+
+def test_detector_repeated_fits_are_reproducible():
+    X, y = _detector_training_frame()
+    first = A1Detector()
+    second = A1Detector()
+    first.fit(X, y)
+    second.fit(X, y)
+    np.testing.assert_allclose(first.score(X), second.score(X), rtol=0, atol=0)
+
+
+def test_detector_rejects_invalid_training_data(detector):
+    X, y = _detector_training_frame()
+    with pytest.raises(ValueError, match="same number"):
+        detector.fit(X, y[:-1])
+    with pytest.raises(ValueError, match="binary"):
+        detector.fit(X, np.full(len(X), 2))
+    with pytest.raises(ValueError, match="numeric"):
+        detector.fit(pd.DataFrame({"text": ["a", "b"]}), np.array([0, 1]))
+
+
+def _reconverging_graph_events() -> pd.DataFrame:
+    base = pd.Timestamp("2026-01-10 10:00:00")
+    return _feature_events(
+        [
+            {
+                "event_id": "victim-a-to-l1-a",
+                "timestamp": base,
+                "customer_id": "victim-a",
+                "customer_account_age_days": 1000,
+                "counterparty_id": "l1-a",
+                "counterparty_account_age_days": 5,
+                "amount": 1000.0,
+                "session_duration_s": 900,
+                "meta": {"a1_call_active": True},
+            },
+            {
+                "event_id": "victim-b-to-l1-b",
+                "timestamp": base + timedelta(minutes=1),
+                "customer_id": "victim-b",
+                "customer_account_age_days": 900,
+                "counterparty_id": "l1-b",
+                "counterparty_account_age_days": 5,
+                "amount": 800.0,
+                "meta": {"a1_call_active": True},
+            },
+            {
+                "event_id": "l1-a-to-l2-a",
+                "timestamp": base + timedelta(hours=1),
+                "customer_id": "l1-a",
+                "customer_account_age_days": 5,
+                "counterparty_id": "l2-a",
+                "counterparty_account_age_days": 6,
+                "amount": 950.0,
+            },
+            {
+                "event_id": "l1-b-to-l2-b",
+                "timestamp": base + timedelta(hours=1, minutes=1),
+                "customer_id": "l1-b",
+                "customer_account_age_days": 5,
+                "counterparty_id": "l2-b",
+                "counterparty_account_age_days": 6,
+                "amount": 760.0,
+            },
+            {
+                "event_id": "l2-a-to-cashout",
+                "timestamp": base + timedelta(hours=2),
+                "customer_id": "l2-a",
+                "customer_account_age_days": 6,
+                "counterparty_id": "cashout",
+                "counterparty_account_age_days": 100,
+                "amount": 900.0,
+            },
+            {
+                "event_id": "l2-b-to-cashout",
+                "timestamp": base + timedelta(hours=2, minutes=1),
+                "customer_id": "l2-b",
+                "customer_account_age_days": 6,
+                "counterparty_id": "cashout",
+                "counterparty_account_age_days": 100,
+                "amount": 720.0,
+            },
+            {
+                "event_id": "unrelated",
+                "timestamp": base,
+                "customer_id": "unrelated-a",
+                "counterparty_id": "unrelated-b",
+                "amount": 50.0,
+            },
+        ]
+    )
+
+
+def test_component_size_uses_two_hop_beneficiary_neighborhood(feature_block):
+    features = feature_block.build(_reconverging_graph_events())
+    # From l1-a: victim-a and l2-a are one hop, cashout is two hops.
+    assert features.loc["victim-a-to-l1-a", "a1_component_size"] == 4.0
+    assert features.loc["unrelated", "a1_component_size"] == 2.0
+
+
+def test_cashout_convergence_detects_distinct_reconverging_l1_paths(feature_block):
+    features = feature_block.build(_reconverging_graph_events())
+    assert features.loc["victim-a-to-l1-a", "a1_cashout_convergence"] == 2.0
+    assert features.loc["victim-b-to-l1-b", "a1_cashout_convergence"] == 2.0
+
+
+def test_component_dissipation_is_aggregate_outflow_over_inflow(feature_block):
+    features = feature_block.build(_reconverging_graph_events())
+    # l1-a's two-hop component is victim-a, l1-a, l2-a, cashout. Incoming edges to
+    # these nodes include its own path plus l2-b's boundary inflow to cashout.
+    expected = (1000.0 + 950.0 + 900.0) / (1000.0 + 950.0 + 900.0 + 720.0)
+    assert features.loc["victim-a-to-l1-a", "a1_component_dissipation"] == pytest.approx(
+        expected
+    )
+
+
+def test_component_age_variance_uses_known_local_account_ages(feature_block):
+    events = _reconverging_graph_events()
+    features = feature_block.build(events)
+    expected = np.var([1000.0, 5.0, 6.0, 100.0], ddof=1)
+    assert features.loc[
+        "victim-a-to-l1-a", "a1_component_age_variance"
+    ] == pytest.approx(expected)
+
+
+def test_graph_window_excludes_edges_beyond_48_hours(feature_block):
+    events = _reconverging_graph_events()
+    extra = _feature_events(
+        [
+            {
+                "event_id": "late-edge",
+                "timestamp": pd.Timestamp("2026-01-10 10:00:00") + timedelta(hours=49),
+                "customer_id": "cashout",
+                "counterparty_id": "late-node",
+                "amount": 100.0,
+            }
+        ]
+    )
+    features = feature_block.build(pd.concat([events, extra], ignore_index=True))
+    assert features.loc["victim-a-to-l1-a", "a1_component_size"] == 4.0
+
+
+def test_call_active_is_safe_binary_metadata_signal(feature_block):
+    events = _reconverging_graph_events()
+    events.at[events.index[-1], "meta"] = "malformed"
+    features = feature_block.build(events)
+    assert features.loc["victim-a-to-l1-a", "a1_call_active"] == 1.0
+    assert features.loc["l1-a-to-l2-a", "a1_call_active"] == 0.0
+    assert features.loc["unrelated", "a1_call_active"] == 0.0
+
+
+def test_session_duration_anomaly_uses_only_prior_payer_history(feature_block):
+    events = _feature_events(
+        [
+            {
+                "event_id": "session-1",
+                "timestamp": "2026-01-01",
+                "customer_id": "victim",
+                "counterparty_id": "shop-1",
+                "amount": 100.0,
+                "session_duration_s": 100,
+            },
+            {
+                "event_id": "session-2",
+                "timestamp": "2026-01-02",
+                "customer_id": "victim",
+                "counterparty_id": "shop-2",
+                "amount": 100.0,
+                "session_duration_s": 200,
+            },
+            {
+                "event_id": "coerced-session",
+                "timestamp": "2026-01-03",
+                "customer_id": "victim",
+                "counterparty_id": "mule",
+                "amount": 100.0,
+                "session_duration_s": 300,
+            },
+            {
+                "event_id": "future-session",
+                "timestamp": "2026-01-04",
+                "customer_id": "victim",
+                "counterparty_id": "shop-3",
+                "amount": 100.0,
+                "session_duration_s": 10000,
+            },
+        ]
+    )
+    features = feature_block.build(events)
+    expected = (300.0 - 150.0) / np.std([100.0, 200.0], ddof=1)
+    assert features.loc[
+        "coerced-session", "a1_session_duration_anomaly"
+    ] == pytest.approx(expected)
+
+
+def test_all_eleven_features_match_card_defender_signals(feature_block):
+    card_path = Path(__file__).parents[1] / "card.json"
+    card = json.loads(card_path.read_text(encoding="utf-8"))
+    assert set(feature_block.feature_names()) == set(card["defender_signals"])
+
+
+def test_experiment_metrics_are_json_safe_and_complete():
+    y = np.array([0, 0, 1, 1], dtype=np.int8)
+    scores = np.array([0.1, 0.2, 0.8, 0.9], dtype=float)
+    metrics = _metrics(y, scores, threshold=0.5)
+    assert metrics["precision"] == 1.0
+    assert metrics["recall"] == 1.0
+    assert metrics["auc_pr"] == 1.0
+    assert metrics["rows"] == 4
+    json.dumps(metrics)
+
+
+def test_signal_auc_reports_discriminative_direction_and_constant_neutrality():
+    X = pd.DataFrame({"inverse": [1.0, 0.9, 0.1, 0.0], "constant": [3.0] * 4})
+    y = np.array([0, 0, 1, 1], dtype=np.int8)
+    auc = _signal_auc(X, y, ["inverse", "constant"])
+    assert auc["inverse"] == 1.0
+    assert auc["constant"] == 0.5
