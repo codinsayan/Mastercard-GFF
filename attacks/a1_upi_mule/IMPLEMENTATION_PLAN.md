@@ -267,6 +267,8 @@ DETECTOR = A1Detector()
 
 # Iteration 1 — Minimal deterministic generator
 
+**Status: COMPLETE** — implemented and verified with deterministic schema tests.
+
 ## Goal
 
 Generate a small, schema-valid victim-to-layer-1 flow before implementing the complete
@@ -421,6 +423,9 @@ validation.
 
 # Iteration 2 — Complete layered mule topology
 
+**Status: COMPLETE** — implemented with causal three-stage flow, bounded infrastructure,
+retained fees, parameter-effect tests, and campaign money-conservation tests.
+
 ## Goal
 
 Extend the minimal generator into the full victim → L1 → L2 → cash-out flow while
@@ -532,6 +537,10 @@ parameter extremes.
 ---
 
 # Iteration 3 — Utility and red-agent state
+
+**Status: COMPLETE** — implemented with normalized cash-out yield, age-adjusted mule
+cost, cash-out infrastructure cost, safe malformed-data handling, exact state-contract
+validation, and economic monotonicity tests.
 
 ## Goal
 
@@ -1303,12 +1312,12 @@ Realism checks should include:
 A1 is complete only when all items are true:
 
 - [ ] `card.json` contains defaults, ranges, semantics, and all defender signals.
-- [ ] `generator.py` creates all three transfer stages.
-- [ ] Generation is deterministic for a fixed input and seed.
-- [ ] Generated rows pass the frozen schema validator.
-- [ ] Causal time and money-conservation tests pass.
-- [ ] `utility()` is finite, bounded, and penalizes infrastructure expansion.
-- [ ] `describe_state()` returns exactly the four required keys.
+- [x] `generator.py` creates all three transfer stages.
+- [x] Generation is deterministic for a fixed input and seed.
+- [x] Generated rows pass the frozen schema validator.
+- [x] Causal time and money-conservation tests pass.
+- [x] `utility()` is finite, bounded, and penalizes infrastructure expansion.
+- [x] `describe_state()` returns exactly the four required keys.
 - [ ] All eleven canonical A1 features are implemented and prefixed.
 - [ ] Feature calculations have hand-verified unit tests.
 - [ ] `A1Detector` fits and scores through the frozen interface.
