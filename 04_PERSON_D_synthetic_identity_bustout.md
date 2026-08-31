@@ -5,6 +5,14 @@
 **Branch:** `feat/a4`
 **Read `00_TEAM_BRIEF_AND_INTEGRATION (1).md` first.**
 
+**Implementation status (31 August 2026): complete on `synthetic_identity_bustout`.** The
+generator, all ten `a4_` signals, two-layer GRU trajectory encoder, clustering, detector,
+Codex-plus-CEM round runner, result artifacts, manual Streamlit interface, meta-learner, LOAO
+evaluation helper, and automated tests are implemented. Reproduction commands and measured
+seed-42 results are in [`attacks/a4_synth_identity/README.md`](attacks/a4_synth_identity/README.md).
+The cross-attack four-fold LOAO run remains an integration action after A1–A3 provide their
+merged detector outputs; its implementation and synthetic four-fold test are already present.
+
 ---
 
 ## 1. Context in 60 seconds

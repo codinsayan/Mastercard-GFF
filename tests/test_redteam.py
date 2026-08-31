@@ -1,5 +1,6 @@
 import json
 import subprocess
+from pathlib import Path
 from types import SimpleNamespace
 
 import pandas as pd
@@ -50,9 +51,7 @@ def test_extra_fields_and_malformed_hypotheses_are_rejected():
 
 
 def test_valid_codex_response_is_strict_and_clamped():
-    raw = json.dumps(
-        _proposal(proposed_params={"split_factor": 100, "unknown": 4})
-    )
+    raw = json.dumps(_proposal(proposed_params={"split_factor": 100, "unknown": 4}))
     result = propose(REPORT, invoke=lambda _: raw)
     assert result["proposed_params"] == {"split_factor": 20}
 
@@ -116,6 +115,25 @@ def test_codex_adapter_uses_safe_noninteractive_command(monkeypatch, tmp_path):
     }
 
 
+def test_codex_adapter_materializes_strict_parameter_schema(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_run(command, **kwargs):
+        if command[-1] == "--version":
+            return SimpleNamespace(returncode=0, stdout="codex-cli 1.2.3\n", stderr="")
+        schema_path = command[command.index("--output-schema") + 1]
+        captured.update(json.loads(Path(schema_path).read_text(encoding="utf-8")))
+        return SimpleNamespace(returncode=0, stdout=json.dumps(_proposal()), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    invoke_codex("prompt", cwd=tmp_path, param_space=REPORT["param_space"])
+
+    proposed = captured["properties"]["proposed_params"]
+    assert set(proposed["properties"]) == set(REPORT["param_space"])
+    assert set(proposed["required"]) == set(REPORT["param_space"])
+    assert proposed["additionalProperties"] is False
+
+
 def test_full_codex_exchange_is_cached(tmp_path):
     cache = tmp_path / "redteam_reasoning.json"
     response = CodexResponse(
@@ -151,7 +169,7 @@ class DummyAttack:
 
 
 def test_cem_refines_toward_objective_and_preserves_types():
-    objective = lambda params: -(params["x"] - 2.0) ** 2 - (params["n"] - 7) ** 2
+    objective = lambda params: -((params["x"] - 2.0) ** 2) - (params["n"] - 7) ** 2
     result = refine(
         {"proposed_params": {"x": -2.0, "n": 2}},
         DummyAttack(),

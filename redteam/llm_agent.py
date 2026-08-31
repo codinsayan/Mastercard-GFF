@@ -6,6 +6,7 @@ import json
 import logging
 import math
 import subprocess
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,8 +35,27 @@ def invoke_codex(
     timeout: float = 120,
     cwd: str | Path = PROJECT_ROOT,
     schema_path: str | Path = DEFAULT_SCHEMA,
+    param_space: dict[str, tuple[float, float]] | None = None,
 ) -> CodexResponse:
     """Invoke the ChatGPT-authenticated Codex CLI without a shell or API key."""
+    if param_space is not None:
+        schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
+        proposed = schema["properties"]["proposed_params"]
+        proposed["properties"] = {name: {"type": "number"} for name in param_space}
+        proposed["required"] = list(param_space)
+        proposed["additionalProperties"] = False
+        with tempfile.TemporaryDirectory(prefix="codex-schema-") as directory:
+            materialized = Path(directory) / "proposal.schema.json"
+            materialized.write_text(json.dumps(schema), encoding="utf-8")
+            return invoke_codex(
+                prompt,
+                executable=executable,
+                model=model,
+                timeout=timeout,
+                cwd=cwd,
+                schema_path=materialized,
+            )
+
     command = [
         executable,
         "exec",
@@ -106,9 +126,7 @@ def _parse(raw: str | dict[str, Any]) -> dict[str, Any]:
     if not isinstance(value["proposed_params"], dict):
         raise TypeError("proposed_params must be an object")
     if any(
-        isinstance(item, bool)
-        or not isinstance(item, (int, float))
-        or not math.isfinite(item)
+        isinstance(item, bool) or not isinstance(item, (int, float)) or not math.isfinite(item)
         for item in value["proposed_params"].values()
     ):
         raise TypeError("proposed parameter values must be finite numbers")
@@ -154,7 +172,11 @@ def propose(
 
     for _ in range(attempts):
         try:
-            response = invoke(retry_prompt)
+            response = (
+                invoke_codex(retry_prompt, param_space=space)
+                if invoke is invoke_codex
+                else invoke(retry_prompt)
+            )
             if isinstance(response, CodexResponse):
                 raw = response.raw
                 metadata = response.metadata
