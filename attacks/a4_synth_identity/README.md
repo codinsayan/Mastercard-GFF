@@ -44,12 +44,12 @@ by the frozen round format for the merged all-attack run. Rounds 1 and 2 also ca
 ## Reference data
 
 Population marginals are fitted to the public **Sparkov** transaction set (1,289,169 legitimate
-rows, 14 merchant categories), obtained from the `pointe77/credit-card-transaction` mirror under
-Apache-2.0. See `data/README.md` for the download step. Fitting to real marginals rather than an
-inline table moves the generated amount distribution from KS 0.351 to **KS 0.132** against the
-real data.
+rows, 14 merchant categories), committed at `data/processed/sparkov_reference.parquet` and
+attributed in `data/README.md`. It needs no setup and is shared by all four attacks, not just
+A4. Fitting to real marginals rather than an inline table moves the generated amount
+distribution from KS 0.351 to **KS 0.132** against the real data.
 
-If the file is absent the experiment falls back to a small inline stand-in table and prints a
+Should the file be missing, the experiment falls back to a small inline stand-in and prints a
 warning; every `a4_summary.json` records which reference produced it under the `reference` key,
 so results are auditable. Only runs with `"is_real_reference_data": true` are reportable.
 

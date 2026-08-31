@@ -2,31 +2,44 @@
 
 **Every attack depends on this, not just A4.** `core/population.py` fits the base population's
 amount and MCC marginals to a real reference set, and that population is the honest traffic all
-four attacks are injected into. If a teammate skips this step their population silently falls
-back to a small stand-in table and any fidelity claim they make is unsupported.
+four attacks are injected into. Without a real reference the population falls back to a small
+stand-in table and every fidelity claim built on it is unsupported -- silently, with no error.
 
-One command, once per clone:
+**`processed/sparkov_reference.parquet` is committed to the repository.** Clone the repo and
+you already have it -- no setup step, and every teammate is fitted to a byte-identical
+reference. Do not delete it.
+
+To regenerate it, or to refresh the 338 MB raw source:
 
 ```bash
 python data/fetch_reference.py
 ```
 
-It downloads the Sparkov transaction set (Apache-2.0, no Kaggle account needed) to `raw/` and
-writes the normalized `amount`/`mcc` file to `processed/sparkov_reference.parquet`. Both
-directories are git-ignored: the raw file is 338 MB and this repository does not redistribute
-source datasets.
+It downloads the Sparkov transaction set to `raw/` and rewrites the normalized `amount`/`mcc`
+file in `processed/`. The raw source stays git-ignored; only the 3.4 MB derived table is
+committed, because a missing copy degrades all four attacks silently rather than loudly.
 
-Put Sparkov or IEEE-CIS source files in `raw/` (ignored by Git). Generated, normalized
-reference data belongs in `processed/`. Do not commit licensed or large source datasets.
+### Attribution
+
+`processed/sparkov_reference.parquet` is derived from the Sparkov credit-card transaction set,
+obtained from the `pointe77/credit-card-transaction` mirror on Hugging Face and distributed
+under the Apache License 2.0. The committed file is a modified subset: legitimate rows only,
+reduced to the `amount` and `mcc` columns, with Sparkov's `amt` and `category` renamed. The
+original is unmodified in every other respect and is not redistributed here.
+
+Put any additional source files, such as IEEE-CIS, in `raw/`, which is ignored by Git. Do not
+commit large or licensed source datasets; commit only small derived reference tables, and only
+with the attribution their licence requires.
 
 `BasePopulation.from_path()` accepts CSV or Parquet. It recognizes Sparkov's `amt` and
 `category` columns and IEEE-CIS's `TransactionAmt` and `ProductCD` columns, normalizing them
 to the required `amount` and `mcc` inputs. All other source columns are deliberately ignored.
 
-The repository does not redistribute either dataset. Download one from its publisher under
-the publisher's terms, then verify the shared foundation with:
+The committed Sparkov reference is a small derived subset, attributed above. Full source
+datasets are not redistributed here; download those from their publisher under the publisher's
+terms. Verify the shared foundation with:
 
 ```bash
 python -m loop.run_rounds --dry-run
-python -m loop.run_rounds --dry-run --reference data/raw/<sparkov-or-ieee-file.csv>
+python -m loop.run_rounds --dry-run --reference data/processed/sparkov_reference.parquet
 ```

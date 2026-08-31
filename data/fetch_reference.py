@@ -1,16 +1,17 @@
 """Fetch and normalize the shared public reference transaction set.
 
 The base population in ``core/population.py`` fits its amount and MCC marginals to real
-data, so every attack -- not just A4 -- depends on this file. Run once per clone:
+data, so every attack -- not just A4 -- depends on this file.
+
+``data/processed/sparkov_reference.parquet`` is committed, so a normal clone needs no
+setup. Run this script only to regenerate that file or to fetch the raw source:
 
     python data/fetch_reference.py
 
 It downloads the Sparkov transaction set (Apache-2.0, no account required) to
-``data/raw/`` and writes the normalized ``amount``/``mcc`` reference that
-``BasePopulation`` consumes to ``data/processed/sparkov_reference.parquet``.
-
-Both directories are git-ignored deliberately: the raw file is 338 MB and source
-datasets are not redistributed from this repository.
+``data/raw/`` and rewrites the normalized ``amount``/``mcc`` reference that
+``BasePopulation`` consumes. The 338 MB raw file stays git-ignored; only the small
+derived table is committed. See data/README.md for attribution.
 """
 
 from __future__ import annotations
