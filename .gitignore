@@ -6,6 +6,12 @@ pytest-cache-files-*/
 .ruff_cache/
 .coverage
 data/raw/
-data/processed/
+data/processed/*
 results/round_*/
 *.parquet
+
+# The 338 MB Sparkov source stays out of the repository, but the small derived
+# reference it produces is committed: core/population.py fits every attack's base
+# population to it, so a missing copy silently degrades all four attacks to a
+# stand-in table. Negation must follow *.parquet - the last matching rule wins.
+!data/processed/sparkov_reference.parquet

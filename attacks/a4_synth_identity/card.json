@@ -1,8 +1,45 @@
 {
   "attack_id": "A4",
-  "attack_summary": "TODO: Synthetic identity bust-out.",
-  "default_params": {},
-  "param_space": {},
-  "param_semantics": {},
-  "defender_signals": {}
+  "name": "Synthetic identity bust-out",
+  "channel": "CNP",
+  "attack_summary": "GenAI-created identities build issuer trust through normal-looking purchases and regular repayments, then behaviorally similar accounts draw down their credit within a coordinated window and disappear.",
+  "default_params": {
+    "n_clusters": 12,
+    "identities_per_cluster": 40,
+    "attribute_overlap_rate": 0.7,
+    "build_days": 75,
+    "utilization_curve_exponent": 2.4,
+    "bustout_sync_window_days": 4,
+    "playbook_variance": 0.05
+  },
+  "param_space": {
+    "n_clusters": [1, 30],
+    "identities_per_cluster": [10, 80],
+    "attribute_overlap_rate": [0.0, 0.9],
+    "build_days": [30, 220],
+    "utilization_curve_exponent": [1.0, 3.5],
+    "bustout_sync_window_days": [1, 45],
+    "playbook_variance": [0.0, 0.8]
+  },
+  "param_semantics": {
+    "n_clusters": "Number of independently operated synthetic-identity campaigns. More clusters increase total payout but require more generated KYC sets and operating infrastructure.",
+    "identities_per_cluster": "Number of fake identities run under one playbook. More is more profitable per campaign but easier to spot as a coordinated group.",
+    "attribute_overlap_rate": "How much identities within a cluster share address fragments, device prefixes and phone blocks. Lowering it is essentially free because generative AI can cheaply create distinct attributes.",
+    "build_days": "How long fake identities behave well before busting out. Longer earns trust and higher limits but ties up capital and delays payout.",
+    "utilization_curve_exponent": "Shape of the credit-usage ramp. Above 1 is convex and deliberately accelerating; near 1 resembles organic growth but earns limits more slowly.",
+    "bustout_sync_window_days": "How tightly a cluster's final draw-down is synchronized. A wider window looks less coordinated but lets the issuer react after early defaults.",
+    "playbook_variance": "How differently identities are operated. Higher variance breaks behavioral correlation but removes the automation that makes the scheme scalable."
+  },
+  "defender_signals": {
+    "a4_shared_address_token_count": "Number of other accounts sharing an address fragment.",
+    "a4_shared_device_prefix_count": "Number of other accounts sharing a device fingerprint prefix.",
+    "a4_phone_block_density": "Fraction of accounts occupying the same phone-number block.",
+    "a4_account_age_at_first_large_txn": "Account age when its first transaction above 20% of the current credit limit appears.",
+    "a4_trajectory_cluster_density": "Fraction of accounts following a nearby utilization, spend and repayment trajectory.",
+    "a4_trajectory_dist_to_centroid": "Distance from an account trajectory to the centroid of its local behavioral cluster.",
+    "a4_trajectory_cluster_size": "Number of accounts in the local behavioral cluster.",
+    "a4_ramp_convexity": "Quadratic curvature of utilization over the observed build period.",
+    "a4_payment_ratio_regularity": "How consistently the account pays almost exactly the same fraction of its balance.",
+    "a4_bustout_sync_score": "Fraction of behaviorally similar accounts that cross 85% utilization within seven days."
+  }
 }

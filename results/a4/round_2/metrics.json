@@ -1,0 +1,84 @@
+{
+  "params": {
+    "n_clusters": 30,
+    "identities_per_cluster": 13,
+    "attribute_overlap_rate": 0.0,
+    "build_days": 32,
+    "utilization_curve_exponent": 1.0,
+    "bustout_sync_window_days": 45,
+    "playbook_variance": 0.8
+  },
+  "proposal": {
+    "reasoning": "Stress the post-fix detector by minimizing cross-account linkage and coordinated timing while preserving enough synthetic campaigns for evaluation. The strongest signals are payment regularity and bust-out synchronization, so maximize playbook variance and widen the synchronization window; use small clusters, distinct attributes, a long build period, and a near-linear utilization ramp to weaken cluster, age, and convexity signals.",
+    "hypotheses": [
+      {
+        "signal_targeted": "a4_bustout_sync_score",
+        "action": "Increase bustout_sync_window_days to 45 so high-utilization transitions are dispersed beyond the detector's seven-day window.",
+        "cost_to_attacker": "High: early outcomes can expose the campaign before later synthetic accounts complete the scenario."
+      },
+      {
+        "signal_targeted": "a4_payment_ratio_regularity",
+        "action": "Set playbook_variance to 0.8 to diversify synthetic repayment and spending trajectories.",
+        "cost_to_attacker": "High: reduces automation and operational consistency."
+      },
+      {
+        "signal_targeted": "a4_trajectory_cluster_density, a4_trajectory_cluster_size, a4_trajectory_dist_to_centroid",
+        "action": "Reduce identities_per_cluster to 10 while retaining 30 independent clusters and maximum playbook variance.",
+        "cost_to_attacker": "Moderate to high: requires more independent campaign setups for the same synthetic population."
+      },
+      {
+        "signal_targeted": "a4_ramp_convexity, a4_account_age_at_first_large_txn",
+        "action": "Use a utilization_curve_exponent near 1 and extend build_days to 180.",
+        "cost_to_attacker": "High: delays the simulated payout and ties up synthetic capital longer."
+      },
+      {
+        "signal_targeted": "a4_shared_address_token_count, a4_shared_device_prefix_count, a4_phone_block_density",
+        "action": "Keep attribute_overlap_rate at 0.0 as a control confirming that attribute-linkage signals remain neutral.",
+        "cost_to_attacker": "Low under the supplied assumption that distinct synthetic attributes are inexpensive to generate."
+      }
+    ],
+    "proposed_params": {
+      "n_clusters": 30,
+      "identities_per_cluster": 10,
+      "attribute_overlap_rate": 0.0,
+      "build_days": 180,
+      "utilization_curve_exponent": 1.05,
+      "bustout_sync_window_days": 45,
+      "playbook_variance": 0.8
+    }
+  },
+  "pre_fix": {
+    "recall": 0.16153846153846155,
+    "precision": 1.0,
+    "auc_pr": 0.9978555970883336,
+    "recall_at_fpr_0.001": 0.16153846153846155,
+    "fpr_at_recall_0.85": 0.001303780964797914
+  },
+  "post_fix": {
+    "recall": 0.9948717948717949,
+    "precision": 1.0,
+    "auc_pr": 0.9966004033419764,
+    "recall_at_fpr_0.001": 0.9948717948717949,
+    "fpr_at_recall_0.85": 0.0
+  },
+  "signal_auc": {
+    "a4_shared_address_token_count": 0.5,
+    "a4_shared_device_prefix_count": 0.5,
+    "a4_phone_block_density": 0.5,
+    "a4_account_age_at_first_large_txn": 0.5578277003309597,
+    "a4_trajectory_cluster_density": 0.774820312238826,
+    "a4_trajectory_dist_to_centroid": 0.7166181927590011,
+    "a4_trajectory_cluster_size": 0.774820312238826,
+    "a4_ramp_convexity": 0.84505733293217,
+    "a4_payment_ratio_regularity": 1.0,
+    "a4_bustout_sync_score": 0.9974158392672082
+  },
+  "utility": 0.7375340239133541,
+  "build_amount_ks": 0.09314814261843618,
+  "budget": {
+    "accepted": true,
+    "utility": 0.7375340239133541,
+    "max_ks": 0.09314814261843618,
+    "reason": ""
+  }
+}
