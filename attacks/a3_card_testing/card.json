@@ -1,8 +1,47 @@
 {
   "attack_id": "A3",
-  "attack_summary": "TODO: Agentic card testing.",
-  "default_params": {},
-  "param_space": {},
-  "param_semantics": {},
-  "defender_signals": {}
+  "name": "Agentic card testing",
+  "channel": "CNP",
+  "attack_summary": "An AI-directed card-testing campaign validates stolen payment cards by coordinating low-value card-not-present attempts across merchants, rotating device fingerprints, varying amounts, and adapting its pace to evade velocity controls. The cards originate from a small number of breach dumps and therefore remain clustered by six-digit BIN even when the agent changes its observable behavior. BIN clustering is a durable defender signal because defeating it requires acquiring and mixing additional card dumps, increasing attacker cost and reducing usable campaign volume.",
+  "default_params": {
+    "cards_per_hour": 40,
+    "amount_min": 30,
+    "amount_max": 60,
+    "n_merchants": 6,
+    "cards_per_device": 40,
+    "n_bins": 2,
+    "decline_rate": 0.78,
+    "merchant_friction_mix": 0.05
+  },
+  "param_space": {
+    "cards_per_hour": [2, 60],
+    "amount_min": [10, 400],
+    "amount_max": [40, 900],
+    "n_merchants": [3, 120],
+    "cards_per_device": [1, 60],
+    "n_bins": [1, 20],
+    "decline_rate": [0.5, 0.95],
+    "merchant_friction_mix": [0.0, 0.8]
+  },
+  "param_semantics": {
+    "cards_per_hour": "Number of distinct primary cards tested during the one-hour campaign. Lower values evade velocity controls but directly reduce the attacker's card-validation throughput; retries do not count toward this number.",
+    "amount_min": "Inclusive lower bound of uniformly distributed primary test-charge amounts. Raising it makes transactions look less like micro-tests but increases cardholder visibility and the financial cost of successful authorizations.",
+    "amount_max": "Inclusive upper bound of uniformly distributed primary test-charge amounts. Raising it can weaken small-amount signals but increases cardholder visibility and loss exposure; parameter sets with amount_min greater than amount_max are invalid.",
+    "n_merchants": "Exact size of the merchant pool across which attempts are distributed uniformly with replacement. Increasing it dilutes per-merchant velocity but requires the attacker to locate and maintain access to more usable merchants.",
+    "cards_per_device": "Number of distinct primary cards handled by one device fingerprint before rotation. Lowering it weakens device fan-in signals, but requires more fingerprint rotation and operational coordination; retries retain the primary card's device.",
+    "n_bins": "Number of deterministic six-digit BIN clusters and corresponding breach dumps supplying the campaign. Increasing it weakens BIN clustering but requires acquiring and mixing more dumps, increasing cost and shrinking the usable volume from each source.",
+    "decline_rate": "Persistent probability that a stolen card is dead. Dead cards decline at low-friction merchants on every attempt, while live cards approve there. Lowering the rate requires acquiring higher-quality and more expensive card inventory; raising it reduces the number of cards successfully validated.",
+    "merchant_friction_mix": "Fraction of the merchant pool assigned HIGH verification friction; the remainder is LOW friction. Higher values can make merchant usage look more diverse, but HIGH-friction primary attempts always decline without revealing whether a card is live, wasting attempts and causing bounded retries."
+  },
+  "defender_signals": {
+    "a3_device_card_fanin_1h": "Number of distinct cards observed on the current device within the causal one-hour window, including the current event but never future events.",
+    "a3_merchant_micro_txn_rate_1h": "Number of micro-transactions observed at the current merchant within the causal one-hour window, exposing concentrated low-value card testing.",
+    "a3_amount_percentile": "Empirical percentile of the current amount against strictly prior CNP transaction amounts, measuring how unusually small the test charge is.",
+    "a3_card_first_seen_recency": "Elapsed time since the card was first observed in strictly prior history, with previously unseen cards represented as newly observed.",
+    "a3_merchant_set_jaccard": "Maximum Jaccard similarity between the current card's merchant set and other cards' merchant sets in the causal rolling window.",
+    "a3_merchant_friction_score": "Average verification-friction strength of merchants touched by the current card in the causal rolling window.",
+    "a3_bin_cooccurrence_score": "Excess concentration of distinct recently active cards sharing the current card's six-digit BIN compared with its strictly prior background frequency.",
+    "a3_bin_entropy_1h": "Normalized entropy of six-digit BIN values among distinct cards in the causal one-hour window; low entropy indicates clustered breach inventory.",
+    "a3_decline_retry_pattern": "Indicator that the current event is a slightly amount-perturbed retry following a prior decline on the same card within the configured causal retry window."
+  }
 }
