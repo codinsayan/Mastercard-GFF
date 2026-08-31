@@ -1,12 +1,12 @@
 {
   "operating_thresholds": {
     "durable_round1": 0.997586,
-    "fragile_round0": 0.996833
+    "fragile_round0": 0.99679
   },
   "round0": {
-    "precision": 0.9963768115942029,
-    "recall": 0.9166666666666666,
-    "roc_auc": 0.9994666666666666
+    "precision": 1.0,
+    "recall": 0.9666666666666667,
+    "roc_auc": 1.0
   },
   "round1_post_fix": {
     "precision": 1.0,
@@ -14,26 +14,25 @@
     "roc_auc": 1.0
   },
   "round1_pre_fix": {
-    "precision": 0.5,
-    "recall": 0.0033333333333333335,
-    "roc_auc": 0.4896277777777778
+    "precision": 0.0,
+    "recall": 0.0,
+    "roc_auc": 0.5234222222222222
   },
   "sample_size_per_dataset": 600,
   "signal_auc": {
-    "a2_amount_vs_cap_ratio": {"round0": 0.6645, "round1": 0.6562},
-    "a2_cart_coherence": {"round0": 1.0, "round1": 0.5141},
+    "a2_amount_vs_cap_ratio": {"round0": 0.6817, "round1": 0.6931},
+    "a2_cart_coherence": {"round0": 1.0, "round1": 0.5908},
     "a2_cart_mutated_post_load": {"round0": 1.0, "round1": 1.0},
-    "a2_consent_age_hours": {"round0": 0.7133, "round1": 0.69},
-    "a2_intent_cart_cosine": {"round0": 0.9998, "round1": 0.5098},
-    "a2_item_count": {"round0": 0.5388, "round1": 0.5066},
-    "a2_max_item_price_share": {"round0": 0.8869, "round1": 0.945},
-    "a2_min_item_cosine_to_cart": {"round0": 1.0, "round1": 0.5243},
+    "a2_consent_age_hours": {"round0": 0.7033, "round1": 0.7333},
+    "a2_intent_cart_cosine": {"round0": 1.0, "round1": 0.5113},
+    "a2_item_count": {"round0": 0.5132, "round1": 0.5336},
+    "a2_max_item_price_share": {"round0": 0.9553, "round1": 0.977},
+    "a2_min_item_cosine_to_cart": {"round0": 1.0, "round1": 0.5949},
     "a2_price_zscore_in_category": {"round0": 1.0, "round1": 1.0}
   },
   "utility": {
-    "constrained_3x_preloaded": 0.0409,
+    "constrained_3x_preloaded": 0.0408,
     "reduction": 0.9488,
-    "round0_40x": 0.7976
+    "round0_40x": 0.7969
   }
 }
-

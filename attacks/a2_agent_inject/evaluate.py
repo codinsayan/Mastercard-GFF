@@ -8,22 +8,17 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import precision_score, recall_score, roc_auc_score
 
-from core.population import BasePopulation, PopulationConfig
+from core.population import PopulationConfig
 
 from .detector import Detector
 from .features import DURABLE_FEATURES, FEATURE_NAMES, ROUND0_FEATURES, Features
 from .generator import Generator
+from .reference import build_sparkov_population
 
 
 def _population() -> pd.DataFrame:
-    reference = pd.DataFrame(
-        {
-            "amount": [125.0, 499.0, 1200.0, 2800.0, 6500.0, 18000.0, 72000.0],
-            "mcc": ["5411", "5812", "5941", "5732", "5712", "5651", "5946"],
-        }
-    )
     config = PopulationConfig(customers=800, merchants=200, vpas=300, days=30, events=1500)
-    return BasePopulation(reference, config).generate(seed=2026)
+    return build_sparkov_population(config, seed=2026)
 
 
 def _metrics(y: np.ndarray, scores: np.ndarray, threshold: float = 0.5) -> dict[str, float]:

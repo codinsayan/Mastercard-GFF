@@ -12,6 +12,7 @@ import pandas as pd
 from core.schema import coerce, validate
 
 from .assets import INTENT_PHRASES, load_catalogue, load_embedding_cache
+from .reference import a2_category_for_mcc
 
 CARD_PATH = Path(__file__).with_name("card.json")
 INTEGER_PARAMS = {"n_sessions", "cart_mutated_post_load", "injected_item_count"}
@@ -51,8 +52,14 @@ class Generator:
 
         rng = np.random.default_rng(seed)
         n_sessions = int(resolved["n_sessions"])
+        reference_calibrated = bool(population.attrs.get("a2_reference_calibrated", False))
+        reference_source = str(population.attrs.get("a2_reference_source", "inline reference"))
         source_indices = rng.choice(len(population), n_sessions, replace=len(population) < n_sessions)
         frame = population.iloc[source_indices].copy().reset_index(drop=True)
+        reference_mccs = frame["counterparty_mcc"].astype(str).to_numpy()
+        reference_percentiles = (
+            pd.to_numeric(frame["amount"], errors="coerce").rank(method="average", pct=True).to_numpy()
+        )
         labels = np.zeros(n_sessions, dtype=np.int8)
         labels[: n_sessions // 2] = 1
         rng.shuffle(labels)
@@ -68,16 +75,33 @@ class Generator:
         metadata: list[dict[str, object]] = []
         counterparties: list[str] = []
         mccs: list[str] = []
-        for index, (timestamp, label) in enumerate(
-            zip(frame["timestamp"], labels, strict=True)
+        for index, (timestamp, label, reference_mcc, reference_percentile) in enumerate(
+            zip(
+                frame["timestamp"],
+                labels,
+                reference_mccs,
+                reference_percentiles,
+                strict=True,
+            )
         ):
-            category = str(rng.choice(categories))
+            calibrated_category = (
+                a2_category_for_mcc(reference_mcc) if reference_calibrated else None
+            )
+            category = calibrated_category or str(rng.choice(categories))
             normal_products = catalogue[category]
             injection_count = int(resolved["injected_item_count"]) if label else 0
             minimum_final_count = max(3, injection_count + 2)
             final_count = int(rng.integers(minimum_final_count, 6))
             normal_count = final_count - injection_count
-            chosen = rng.choice(len(normal_products), size=normal_count, replace=False)
+            if reference_calibrated:
+                chosen = self._select_normal_products(
+                    normal_products,
+                    count=normal_count,
+                    spending_percentile=float(reference_percentile),
+                    rng=rng,
+                )
+            else:
+                chosen = rng.choice(len(normal_products), size=normal_count, replace=False)
             cart_items = [str(normal_products[position]["item"]) for position in chosen]
             medians = [float(normal_products[position]["median_price"]) for position in chosen]
             item_prices = [
@@ -150,6 +174,12 @@ class Generator:
                     "a2_cart_mutated_post_load": mutated,
                     "a2_spend_cap": spend_cap,
                     "a2_realized_semantic_distances": realized_distances,
+                    "a2_reference_calibrated": reference_calibrated,
+                    "a2_reference_source": reference_source,
+                    "a2_reference_mcc": reference_mcc if reference_calibrated else "",
+                    "a2_reference_amount_percentile": (
+                        round(float(reference_percentile), 6) if reference_calibrated else None
+                    ),
                 }
             )
 
@@ -171,6 +201,23 @@ class Generator:
         frame = coerce(frame)
         validate(frame)
         return frame
+
+    @staticmethod
+    def _select_normal_products(
+        products: list[dict[str, object]],
+        *,
+        count: int,
+        spending_percentile: float,
+        rng: np.random.Generator,
+    ) -> np.ndarray:
+        """Select normal products from the Sparkov-calibrated spending tier."""
+        prices = np.asarray([float(product["median_price"]) for product in products])
+        order = np.argsort(prices, kind="stable")
+        ranks = np.empty(len(products), dtype=float)
+        ranks[order] = np.linspace(0.0, 1.0, len(products))
+        target = float(np.clip(spending_percentile, 0.0, 1.0))
+        weights = np.exp(-np.abs(ranks - target) / 0.22) + 0.02
+        return rng.choice(len(products), size=count, replace=False, p=weights / weights.sum())
 
     def utility(self, df: pd.DataFrame) -> float:
         """Normalize excess injected value against the maximum configured multiplier."""

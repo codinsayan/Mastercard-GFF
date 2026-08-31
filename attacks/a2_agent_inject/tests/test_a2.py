@@ -7,6 +7,13 @@ import pytest
 from attacks.a2_agent_inject.assets import load_catalogue, load_embedding_cache
 from attacks.a2_agent_inject.features import FEATURE_NAMES, Features
 from attacks.a2_agent_inject.generator import Generator
+from attacks.a2_agent_inject.reference import (
+    SPARKOV_REFERENCE_CATEGORIES,
+    SPARKOV_REFERENCE_ROWS,
+    a2_category_for_mcc,
+    build_sparkov_population,
+    load_sparkov_reference,
+)
 from core.population import BasePopulation, PopulationConfig
 from core.schema import validate
 
@@ -32,6 +39,12 @@ def generated(population: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return round0, evolved
 
 
+@pytest.fixture(scope="module")
+def sparkov_population() -> pd.DataFrame:
+    config = PopulationConfig(customers=100, merchants=40, vpas=60, days=7, events=250)
+    return build_sparkov_population(config, seed=99)
+
+
 def test_committed_assets_are_complete() -> None:
     catalogue = load_catalogue()
     cache = load_embedding_cache()
@@ -40,6 +53,34 @@ def test_committed_assets_are_complete() -> None:
     assert len(cache["item_vectors"]) == 150
     assert len(cache["intent_vectors"]) == 15
     assert cache["dimension"] == 384
+
+
+def test_sparkov_reference_is_complete_and_trusted() -> None:
+    reference = load_sparkov_reference()
+    assert len(reference) == SPARKOV_REFERENCE_ROWS
+    assert reference["mcc"].nunique() == SPARKOV_REFERENCE_CATEGORIES
+    assert reference["amount"].gt(0).all()
+
+
+def test_sparkov_calibration_changes_a2_sessions(sparkov_population: pd.DataFrame) -> None:
+    generator = Generator()
+    calibrated = generator.generate(generator.default_params(), sparkov_population, seed=4321)
+
+    inline_population = sparkov_population.copy(deep=True)
+    inline_population.attrs.clear()
+    uncalibrated = generator.generate(generator.default_params(), inline_population, seed=4321)
+
+    calibrated_meta = calibrated["meta"].tolist()
+    assert all(meta["a2_reference_calibrated"] for meta in calibrated_meta)
+    assert all(0 < meta["a2_reference_amount_percentile"] <= 1 for meta in calibrated_meta)
+    assert any(
+        meta["a2_intent_category"] == a2_category_for_mcc(meta["a2_reference_mcc"])
+        for meta in calibrated_meta
+        if a2_category_for_mcc(meta["a2_reference_mcc"]) is not None
+    )
+    assert calibrated["meta"].map(lambda value: value["a2_cart_items"]).tolist() != (
+        uncalibrated["meta"].map(lambda value: value["a2_cart_items"]).tolist()
+    )
 
 
 def test_generator_produces_valid_balanced_sessions(

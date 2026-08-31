@@ -12,7 +12,8 @@ import streamlit as st
 
 from attacks.a2_agent_inject.features import Features
 from attacks.a2_agent_inject.generator import Generator
-from core.population import BasePopulation, PopulationConfig
+from attacks.a2_agent_inject.reference import build_sparkov_population
+from core.population import PopulationConfig
 
 METRICS_PATH = Path(__file__).with_name("demo_metrics.json")
 SCENARIOS = (
@@ -114,14 +115,8 @@ def evaluation_results() -> dict[str, object]:
 
 @st.cache_data(show_spinner=False)
 def demo_sessions(seed: int) -> dict[str, pd.DataFrame]:
-    reference = pd.DataFrame(
-        {
-            "amount": [125.0, 499.0, 1200.0, 2800.0, 6500.0, 18000.0, 72000.0],
-            "mcc": ["5411", "5812", "5941", "5732", "5712", "5651", "5946"],
-        }
-    )
     config = PopulationConfig(customers=500, merchants=150, vpas=200, days=30, events=1000)
-    population = BasePopulation(reference, config).generate(seed=2026)
+    population = build_sparkov_population(config, seed=2026)
     generator = Generator()
     round0 = generator.default_params()
     evolved = {**round0, "injection_semantic_distance": 0.25}
@@ -445,7 +440,9 @@ with tab_mortality:
         st.plotly_chart(recall_chart(metrics), width="stretch", config={"displayModeBar": False})
         st.markdown(
             '<div class="notice danger"><b>The old signal is dead.</b> Intent/cart cosine '
-            'falls from AUC 0.9998 to 0.5098—indistinguishable from chance.</div>',
+            f'falls from AUC {metrics["signal_auc"]["a2_intent_cart_cosine"]["round0"]:.4f} '
+            f'to {metrics["signal_auc"]["a2_intent_cart_cosine"]["round1"]:.4f}—'
+            'indistinguishable from chance.</div>',
             unsafe_allow_html=True,
         )
     with right:
@@ -474,7 +471,7 @@ with tab_validation:
     checks = pd.DataFrame(
         [
             ("Frozen integration contract", "PASS", "Schema, interfaces and feature semantics"),
-            ("A2 behavioral tests", "5 / 5 PASS", "Generation, evasion, economics and assets"),
+            ("A2 behavioral tests", "7 / 7 PASS", "Generation, evasion, economics and assets"),
             ("Full repository suite", "23 PASS", "Three unmerged attacks skipped as expected"),
             ("Deterministic replay", "PASS", "Same seed produces byte-identical events"),
             ("Offline judging mode", "PASS", "Cached 384-dimensional MiniLM embeddings"),
