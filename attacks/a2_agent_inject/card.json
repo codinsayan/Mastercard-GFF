@@ -1,8 +1,44 @@
 {
   "attack_id": "A2",
-  "attack_summary": "TODO: Prompt-injected AI shopping agent.",
-  "default_params": {},
-  "param_space": {},
-  "param_semantics": {},
-  "defender_signals": {}
+  "name": "Prompt-injected AI shopping agent",
+  "channel": "AGENTIC",
+  "attack_summary": "A compromised merchant page hides instructions aimed at an AI shopping agent. The agent treats those instructions as trusted context and adds attacker-selected products while the token, merchant policy, category consent, and spending ceiling remain valid. The first variant inserts an unrelated premium item; the evolved variant preserves semantic alignment by inserting an in-category product at an economically absurd price.",
+  "default_params": {
+    "n_sessions": 600,
+    "injection_semantic_distance": 0.8,
+    "price_multiplier": 40.0,
+    "consent_age_hours": 1.0,
+    "cart_mutated_post_load": 1,
+    "spend_cap_utilization": 0.85,
+    "injected_item_count": 1
+  },
+  "param_space": {
+    "n_sessions": [600, 600],
+    "injection_semantic_distance": [0.05, 0.95],
+    "price_multiplier": [1.2, 50.0],
+    "consent_age_hours": [0.1, 168.0],
+    "cart_mutated_post_load": [0, 1],
+    "spend_cap_utilization": [0.2, 0.99],
+    "injected_item_count": [1, 3]
+  },
+  "param_semantics": {
+    "n_sessions": "The fixed number of matched legitimate and attack simulation sessions. It is held at 600 so the red agent cannot improve apparent evasion by changing sample size.",
+    "injection_semantic_distance": "How unrelated the injected product is to the user's intent. High values select obvious cross-category mismatches. Low values restrict the attacker to plausible products from the intended category, improving stealth but shrinking the catalogue of products it can push.",
+    "price_multiplier": "The injected price divided by that product's normal catalogue median. Raising it extracts more value per compromised session but makes the transaction economically implausible.",
+    "consent_age_hours": "How old the user's signed consent is at checkout. Older consent avoids asking the user again but creates a stronger provenance anomaly.",
+    "cart_mutated_post_load": "Whether the injected product was added after the merchant page loaded. Setting this to zero is stealthier but requires deeper compromise of the merchant's source instead of an injectable page field.",
+    "spend_cap_utilization": "The cart total divided by the user's spending ceiling. A higher value extracts more under the valid cap but leaves less safety margin and is more likely to draw attention.",
+    "injected_item_count": "How many attacker-selected products are added. More products increase gross extraction but create more semantic, economic, and coherence evidence and require a larger valid spending ceiling."
+  },
+  "defender_signals": {
+    "a2_intent_cart_cosine": "Cosine similarity between the signed user intent and the mean embedding of the purchased cart.",
+    "a2_amount_vs_cap_ratio": "Cart total divided by the consent policy's spending ceiling.",
+    "a2_item_count": "Number of products in the final cart.",
+    "a2_price_zscore_in_category": "Largest log-price deviation from the normal catalogue price for the corresponding product category.",
+    "a2_max_item_price_share": "Fraction of the cart total contributed by its single most expensive product.",
+    "a2_cart_mutated_post_load": "Whether the cart changed after the merchant page completed loading.",
+    "a2_consent_age_hours": "Hours between issuance of the signed consent and checkout.",
+    "a2_cart_coherence": "Mean pairwise semantic similarity among products in the same cart.",
+    "a2_min_item_cosine_to_cart": "Lowest similarity between any product and the mean embedding of the other products in the cart."
+  }
 }
