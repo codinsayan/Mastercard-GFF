@@ -4,14 +4,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from attacks.a3_card_testing.features import ROUND0_FEATURES, A3Features
+from attacks.a3_card_testing.features import FEATURES, A3Features
 from attacks.a3_card_testing.generator import A3Generator
 from core.population import BasePopulation, PopulationConfig
 
 
 def _events(rows: list[tuple]) -> pd.DataFrame:
+    normalised = [row + ("411111", "APPROVED", {}) if len(row) == 8 else row for row in rows]
     return pd.DataFrame(
-        rows,
+        normalised,
         columns=[
             "event_id",
             "timestamp",
@@ -21,6 +22,9 @@ def _events(rows: list[tuple]) -> pd.DataFrame:
             "counterparty_type",
             "amount",
             "channel",
+            "card_bin",
+            "auth_result",
+            "meta",
         ],
     ).assign(timestamp=lambda frame: pd.to_datetime(frame["timestamp"]))
 
@@ -28,9 +32,45 @@ def _events(rows: list[tuple]) -> pd.DataFrame:
 def test_round0_features_have_contract_shape_and_preserve_input_order():
     events = _events(
         [
-            ("e2", "2026-01-01 00:20:00", "d1", "c1", "m1", "MERCHANT", 120.0, "CNP"),
-            ("e0", "2026-01-01 00:00:00", "d1", "c1", "m1", "MERCHANT", 50.0, "CNP"),
-            ("e1", "2026-01-01 00:10:00", "d1", "c2", "m1", "MERCHANT", 80.0, "CNP"),
+            (
+                "e2",
+                "2026-01-01 00:20:00",
+                "d1",
+                "c1",
+                "m1",
+                "MERCHANT",
+                120.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                {},
+            ),
+            (
+                "e0",
+                "2026-01-01 00:00:00",
+                "d1",
+                "c1",
+                "m1",
+                "MERCHANT",
+                50.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                {},
+            ),
+            (
+                "e1",
+                "2026-01-01 00:10:00",
+                "d1",
+                "c2",
+                "m1",
+                "MERCHANT",
+                80.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                {},
+            ),
         ]
     )
     features = A3Features().build(events)
@@ -38,7 +78,7 @@ def test_round0_features_have_contract_shape_and_preserve_input_order():
     assert A3Features.attack_id == "A3"
     assert list(features.index) == ["e2", "e0", "e1"]
     assert features.index.name == "event_id"
-    assert tuple(features.columns) == ROUND0_FEATURES
+    assert tuple(features.columns) == FEATURES
     assert all(column.startswith("a3_") for column in features)
     assert all(np.issubdtype(dtype, np.floating) for dtype in features.dtypes)
     assert np.isfinite(features.to_numpy()).all()
@@ -133,18 +173,217 @@ def test_future_event_does_not_change_existing_features():
         ]
     )
     before = A3Features().build(events)
-    future = _events(
-        [("future", "2026-02-01", "d1", "c9", "m1", "MERCHANT", 9999.0, "CNP")]
-    )
+    future = _events([("future", "2026-02-01", "d1", "c9", "m1", "MERCHANT", 9999.0, "CNP")])
     after = A3Features().build(pd.concat([events, future], ignore_index=True))
 
     pd.testing.assert_frame_equal(before, after.loc[before.index])
 
 
-def test_missing_values_use_zero_and_neutral_conventions():
+def test_merchant_set_jaccard_and_friction_are_card_attributed_and_causal():
+    low = {"a3_merchant_friction_tier": "LOW"}
+    high = {"a3_merchant_friction_tier": "HIGH"}
     events = _events(
-        [("e0", "2026-01-01", "", "", "", "", np.nan, "CNP")]
+        [
+            (
+                "e0",
+                "2026-01-01 00:00:00",
+                "d0",
+                "c1",
+                "m1",
+                "MERCHANT",
+                50.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                low,
+            ),
+            (
+                "e1",
+                "2026-01-01 00:05:00",
+                "d1",
+                "c2",
+                "m1",
+                "MERCHANT",
+                50.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                high,
+            ),
+            (
+                "e2",
+                "2026-01-01 00:10:00",
+                "d0",
+                "c1",
+                "m2",
+                "MERCHANT",
+                50.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                high,
+            ),
+        ]
     )
+    features = A3Features().build(events)
+
+    assert features["a3_merchant_set_jaccard"].to_dict() == {
+        "e0": 0.0,
+        "e1": 1.0,
+        "e2": 0.5,
+    }
+    assert features["a3_merchant_friction_score"].to_dict() == {
+        "e0": 0.0,
+        "e1": 1.0,
+        "e2": 0.5,
+    }
+
+
+def test_bin_features_count_distinct_active_cards_and_expire_at_one_hour():
+    events = _events(
+        [
+            (
+                "e0",
+                "2026-01-01 00:00:00",
+                "d0",
+                "c1",
+                "m1",
+                "MERCHANT",
+                50.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                {},
+            ),
+            (
+                "e1",
+                "2026-01-01 00:10:00",
+                "d1",
+                "c2",
+                "m2",
+                "MERCHANT",
+                50.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                {},
+            ),
+            (
+                "e2",
+                "2026-01-01 00:20:00",
+                "d2",
+                "c3",
+                "m3",
+                "MERCHANT",
+                50.0,
+                "CNP",
+                "522145",
+                "APPROVED",
+                {},
+            ),
+            (
+                "e3",
+                "2026-01-01 01:00:00",
+                "d3",
+                "c4",
+                "m4",
+                "MERCHANT",
+                50.0,
+                "CNP",
+                "522145",
+                "APPROVED",
+                {},
+            ),
+        ]
+    )
+    features = A3Features().build(events)
+
+    assert features.loc["e2", "a3_bin_cooccurrence_score"] == pytest.approx(1 / 3)
+    assert features.loc["e2", "a3_bin_entropy_1h"] == pytest.approx(
+        -(2 / 3 * np.log(2 / 3) + 1 / 3 * np.log(1 / 3)) / np.log(2)
+    )
+    assert features.loc["e3", "a3_bin_entropy_1h"] == pytest.approx(
+        -(1 / 3 * np.log(1 / 3) + 2 / 3 * np.log(2 / 3)) / np.log(2)
+    )
+
+
+def test_decline_retry_pattern_marks_only_small_prompt_same_card_perturbations():
+    events = _events(
+        [
+            (
+                "e0",
+                "2026-01-01 00:00:00",
+                "d0",
+                "c1",
+                "m1",
+                "MERCHANT",
+                100.0,
+                "CNP",
+                "411111",
+                "DECLINED",
+                {},
+            ),
+            (
+                "e1",
+                "2026-01-01 00:01:00",
+                "d0",
+                "c1",
+                "m2",
+                "MERCHANT",
+                105.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                {},
+            ),
+            (
+                "e2",
+                "2026-01-01 00:02:00",
+                "d0",
+                "c2",
+                "m2",
+                "MERCHANT",
+                105.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                {},
+            ),
+            (
+                "e3",
+                "2026-01-01 00:03:00",
+                "d0",
+                "c1",
+                "m3",
+                "MERCHANT",
+                120.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                {},
+            ),
+            (
+                "e4",
+                "2026-01-01 00:06:00",
+                "d0",
+                "c1",
+                "m4",
+                "MERCHANT",
+                102.0,
+                "CNP",
+                "411111",
+                "APPROVED",
+                {},
+            ),
+        ]
+    )
+    pattern = A3Features().build(events)["a3_decline_retry_pattern"]
+
+    assert pattern.to_dict() == {"e0": 0.0, "e1": 1.0, "e2": 0.0, "e3": 0.0, "e4": 0.0}
+
+
+def test_missing_values_use_zero_and_neutral_conventions():
+    events = _events([("e0", "2026-01-01", "", "", "", "", np.nan, "CNP")])
     features = A3Features().build(events)
 
     assert features.loc["e0"].to_dict() == {
@@ -152,6 +391,11 @@ def test_missing_values_use_zero_and_neutral_conventions():
         "a3_merchant_micro_txn_rate_1h": 0.0,
         "a3_amount_percentile": 0.5,
         "a3_card_first_seen_recency": 0.0,
+        "a3_merchant_set_jaccard": 0.0,
+        "a3_merchant_friction_score": 0.5,
+        "a3_bin_cooccurrence_score": 0.0,
+        "a3_bin_entropy_1h": 1.0,
+        "a3_decline_retry_pattern": 0.0,
     }
 
 
