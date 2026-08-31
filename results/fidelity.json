@@ -1,11 +1,136 @@
 {
-  "correlation_matrix_distance": null,
-  "discriminator": null,
-  "ks_statistics": null,
-  "reason": "No local Sparkov or IEEE-CIS transaction dataset was supplied; external-data metrics were not computed.",
-  "status": "blocked_no_dataset",
-  "supported_datasets": [
-    "sparkov",
-    "ieee-cis"
-  ]
+  "comparison_features": [
+    "amount",
+    "log_amount",
+    "hour_of_day",
+    "day_of_week",
+    "category_frequency"
+  ],
+  "correlation_matrix_distance": {
+    "matrices": {
+      "real": {
+        "amount": {
+          "amount": 1.0,
+          "category_frequency": 0.005932809536505079,
+          "day_of_week": -0.009065456735064273,
+          "hour_of_day": -0.03499348317288642,
+          "log_amount": 0.4854649932963109
+        },
+        "category_frequency": {
+          "amount": 0.005932809536505079,
+          "category_frequency": 1.0,
+          "day_of_week": 0.0009948559988965464,
+          "hour_of_day": -0.08186687115941245,
+          "log_amount": 0.23196575242501957
+        },
+        "day_of_week": {
+          "amount": -0.009065456735064273,
+          "category_frequency": 0.0009948559988965464,
+          "day_of_week": 1.0,
+          "hour_of_day": 0.004271732643038218,
+          "log_amount": -0.0012736926161600317
+        },
+        "hour_of_day": {
+          "amount": -0.03499348317288642,
+          "category_frequency": -0.08186687115941245,
+          "day_of_week": 0.004271732643038218,
+          "hour_of_day": 1.0,
+          "log_amount": -0.1460936758508052
+        },
+        "log_amount": {
+          "amount": 0.4854649932963109,
+          "category_frequency": 0.23196575242501957,
+          "day_of_week": -0.0012736926161600317,
+          "hour_of_day": -0.1460936758508052,
+          "log_amount": 1.0
+        }
+      },
+      "synthetic": {
+        "amount": {
+          "amount": 1.0,
+          "category_frequency": -0.0017214161695577432,
+          "day_of_week": 0.002620133590097877,
+          "hour_of_day": 0.00022164566643518478,
+          "log_amount": 0.6602539495850818
+        },
+        "category_frequency": {
+          "amount": -0.0017214161695577432,
+          "category_frequency": 1.0,
+          "day_of_week": 0.0015843736329254113,
+          "hour_of_day": 0.0009555534785398646,
+          "log_amount": 0.0032615124186798693
+        },
+        "day_of_week": {
+          "amount": 0.002620133590097877,
+          "category_frequency": 0.0015843736329254113,
+          "day_of_week": 1.0,
+          "hour_of_day": 0.006328534230582242,
+          "log_amount": 0.005106331359302888
+        },
+        "hour_of_day": {
+          "amount": 0.00022164566643518478,
+          "category_frequency": 0.0009555534785398646,
+          "day_of_week": 0.006328534230582242,
+          "hour_of_day": 1.0,
+          "log_amount": -0.0008729392863331543
+        },
+        "log_amount": {
+          "amount": 0.6602539495850818,
+          "category_frequency": 0.0032615124186798693,
+          "day_of_week": 0.005106331359302888,
+          "hour_of_day": -0.0008729392863331543,
+          "log_amount": 1.0
+        }
+      }
+    },
+    "metric": "root-mean-square correlation difference",
+    "value": 0.09477803675955654
+  },
+  "dataset": {
+    "format": "sparkov",
+    "path": "data\\raw\\sparkov_fraudTrain.csv",
+    "rows_dropped_during_cleaning": 0,
+    "rows_read": 1296675,
+    "rows_sampled": 50000,
+    "sha256": "1a100d7d1e5e77442a5ce632293657c099d70ea0991797e92b55eb987da59f9f",
+    "valid_legitimate_rows": 1289169
+  },
+  "discriminator": {
+    "feature_importance_gain": {
+      "amount": 1.2552519012388514e-10,
+      "category_frequency": 994666.3226345181,
+      "day_of_week": 4.5474699852075806e-13,
+      "hour_of_day": 1.935341260394144e-12,
+      "log_amount": 0.0
+    },
+    "model": "LightGBM",
+    "positive_class": "synthetic",
+    "roc_auc": 1.0,
+    "test_rows": 30000,
+    "train_rows": 70000
+  },
+  "ks_statistics": {
+    "amount": 0.15749999999999997,
+    "category_frequency": 0.32116,
+    "day_of_week": 0.05856,
+    "hour_of_day": 0.16248,
+    "log_amount": 0.15749999999999997
+  },
+  "ks_summary": {
+    "maximum": 0.32116,
+    "mean": 0.17143999999999998
+  },
+  "methodology": {
+    "discriminator_split": "stratified deterministic train/test split",
+    "real_rows": "legitimate rows only when a fraud label is available",
+    "sampling": "deterministic sample without replacement",
+    "synthetic_rows": "CNP and CARD_PRESENT base-population rows"
+  },
+  "status": "complete",
+  "synthetic": {
+    "card_rows_compared": 50000,
+    "generator": "core.population.BasePopulation",
+    "rows_generated": 150000,
+    "seed": 42
+  }
 }
