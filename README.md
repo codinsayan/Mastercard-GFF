@@ -14,6 +14,15 @@ py -3.12 -m venv .venv
 .venv\Scripts\python -m pytest
 ```
 
+On macOS/Linux with `uv`:
+
+```bash
+uv venv --python 3.12
+uv pip install --python .venv/bin/python -r requirements-dev.txt
+.venv/bin/python -m pytest
+.venv/bin/python -m loop.run_rounds --dry-run
+```
+
 Place the public Sparkov or IEEE-CIS reference transaction files under `data/raw/`.
 Raw data and generated Parquet outputs are intentionally ignored by Git.
 

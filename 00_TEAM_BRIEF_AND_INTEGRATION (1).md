@@ -361,9 +361,15 @@ This is a **precomputation dependency only**. A teammate without the authenticat
 ```python
 report   = build_detector_report(attack, round_metrics, sample_events)
 proposal = llm_agent.propose(report)      # stage 1 — codex exec + validated JSON
-params   = cem.refine(proposal, attack)   # stage 2 — numeric search
-params   = budgets.enforce(params, attack)
+params   = cem.refine(proposal, attack, score_candidate)  # stage 2 — numeric search
+events   = attack.generate(params, population, seed)
+events   = realism.enforce(attack, events, reference_events)
 ```
+
+Here `score_candidate(params) -> float` is supplied by the round orchestrator and rewards
+detector evasion while keeping higher scores better. Calling `cem.refine()` without an objective
+only returns the bounded proposal, which is useful for dry-run integration checks but does not
+claim to have optimised it.
 
 `llm_agent.propose()` returns strict JSON regardless of whether Codex or the fallback produced it:
 

@@ -19,10 +19,11 @@ def build_detector_report(
     round_metrics: dict,
     sample_events: pd.DataFrame,
     *,
+    params: dict | None = None,
     max_examples: int = 10,
 ) -> dict:
     """Return model-output evidence without exposing model internals or weights."""
-    params = attack.default_params()
+    params = attack.default_params() if params is None else params
     state = attack.describe_state(params)
     missing = REQUIRED_STATE_KEYS.difference(state)
     if missing:
@@ -44,4 +45,3 @@ def build_detector_report(
         "round_metrics": round_metrics,
         "sample_outcomes": examples,
     }
-

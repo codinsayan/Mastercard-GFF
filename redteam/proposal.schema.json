@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "reasoning": {"type": "string", "minLength": 1},
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "signal_targeted": {"type": "string", "minLength": 1},
+          "action": {"type": "string", "minLength": 1},
+          "cost_to_attacker": {"type": "string", "minLength": 1}
+        },
+        "required": ["signal_targeted", "action", "cost_to_attacker"],
+        "additionalProperties": false
+      }
+    },
+    "proposed_params": {
+      "type": "object",
+      "additionalProperties": {"type": "number"}
+    }
+  },
+  "required": ["reasoning", "hypotheses", "proposed_params"],
+  "additionalProperties": false
+}
