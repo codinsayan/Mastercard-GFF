@@ -1,8 +1,46 @@
 {
   "attack_id": "A1",
-  "attack_summary": "TODO: Deepfake coercion to UPI mule cash-out.",
-  "default_params": {},
-  "param_space": {},
-  "param_semantics": {},
-  "defender_signals": {}
+  "name": "Deepfake coercion to UPI mule cash-out",
+  "channel": "UPI_P2P",
+  "attack_summary": "A victim is coerced during a deepfake call into authorizing a genuine UPI transfer from their usual device to a fraud-controlled mule. The payment credentials look legitimate, so detection must combine beneficiary behavior, money-flow topology, and durable signs of coercion on the payer side.",
+  "default_params": {
+    "n_victims": 400,
+    "mule_age_days": 2,
+    "split_factor": 3,
+    "dwell_time_hours": 0.2,
+    "amount_multiplier_vs_baseline": 8.0,
+    "n_cashout_points": 5,
+    "n_mules_layer1": 60
+  },
+  "param_space": {
+    "n_victims": [20, 2000],
+    "mule_age_days": [1, 120],
+    "split_factor": [2, 25],
+    "dwell_time_hours": [0.05, 48.0],
+    "amount_multiplier_vs_baseline": [2.0, 15.0],
+    "n_cashout_points": [3, 60],
+    "n_mules_layer1": [20, 400]
+  },
+  "param_semantics": {
+    "n_victims": "Number of customers coerced in the simulated campaign. More victims increase yield and exposure but require more concurrent social-engineering operations.",
+    "mule_age_days": "How long receiving accounts existed before use. Older accounts look less disposable, but pre-aged accounts cost more and risk being frozen before use.",
+    "split_factor": "Number of accounts across which funds are divided at a laundering hop. Wider splitting lowers per-account fan-in but needs more mules and operational coordination.",
+    "dwell_time_hours": "How long funds remain in a mule account before moving. Longer dwell looks less like instant laundering but increases exposure to freezes and victim reports.",
+    "amount_multiplier_vs_baseline": "Coerced payment size relative to the victim's historical mean. Higher values improve criminal yield but are more anomalous for the payer.",
+    "n_cashout_points": "Number of final withdrawal destinations. More destinations reduce convergence but require expensive cash-out infrastructure.",
+    "n_mules_layer1": "Number of first-hop receiving accounts. More accounts spread victim payments but increase acquisition and management cost."
+  },
+  "defender_signals": {
+    "a1_benef_account_age_days": "Age in days of the account receiving the transfer.",
+    "a1_benef_fanin_24h": "Number of distinct prior payers sending to the beneficiary during the preceding 24 hours.",
+    "a1_dissipation_ratio": "Share of received value that leaves the beneficiary within one hour.",
+    "a1_payer_amount_zscore": "Payment amount relative to the payer's prior spending distribution.",
+    "a1_payee_added_to_transfer_seconds": "Elapsed seconds between adding the beneficiary and initiating the transfer.",
+    "a1_component_size": "Number of accounts in the beneficiary's two-hop transfer neighborhood.",
+    "a1_component_dissipation": "External outflow divided by external inflow for the beneficiary's transfer component.",
+    "a1_cashout_convergence": "Number of distinct upstream mule paths converging on shared cash-out infrastructure.",
+    "a1_component_age_variance": "Variance of account ages inside the beneficiary's transfer component.",
+    "a1_call_active": "Whether a phone call was active while the payment was initiated.",
+    "a1_session_duration_anomaly": "Deviation of the current payment-session duration from the payer's prior behavior."
+  }
 }
