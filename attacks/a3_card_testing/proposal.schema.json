@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "reasoning": {"type": "string", "minLength": 1},
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "signal_targeted": {"type": "string", "minLength": 1},
+          "action": {"type": "string", "minLength": 1},
+          "cost_to_attacker": {"type": "string", "minLength": 1}
+        },
+        "required": ["signal_targeted", "action", "cost_to_attacker"],
+        "additionalProperties": false
+      }
+    },
+    "proposed_params": {
+      "type": "object",
+      "properties": {
+        "cards_per_hour": {"type": "number"},
+        "amount_min": {"type": "number"},
+        "amount_max": {"type": "number"},
+        "n_merchants": {"type": "number"},
+        "cards_per_device": {"type": "number"},
+        "n_bins": {"type": "number"},
+        "decline_rate": {"type": "number"},
+        "merchant_friction_mix": {"type": "number"}
+      },
+      "required": [
+        "cards_per_hour",
+        "amount_min",
+        "amount_max",
+        "n_merchants",
+        "cards_per_device",
+        "n_bins",
+        "decline_rate",
+        "merchant_friction_mix"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": ["reasoning", "hypotheses", "proposed_params"],
+  "additionalProperties": false
+}

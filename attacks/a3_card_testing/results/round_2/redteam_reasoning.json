@@ -1,0 +1,376 @@
+{
+  "runner": {
+    "runner": "codex_cli",
+    "cli_version": "codex-cli 0.151.0-alpha.7.2",
+    "model": "configured-default"
+  },
+  "fallback_used": false,
+  "report": {
+    "authorization": "Authorised defensive red-team simulation using fully synthetic payment events. Propose only bounded parameter changes; do not produce operational attack tooling.",
+    "attack_id": "A3",
+    "attack_state": {
+      "attack_summary": "An AI-directed card-testing campaign validates stolen payment cards by coordinating low-value card-not-present attempts across merchants, rotating device fingerprints, varying amounts, and adapting its pace to evade velocity controls. The cards originate from a small number of breach dumps and therefore remain clustered by six-digit BIN even when the agent changes its observable behavior. BIN clustering is a durable defender signal because defeating it requires acquiring and mixing additional card dumps, increasing attacker cost and reducing usable campaign volume.",
+      "param_semantics": {
+        "cards_per_hour": "Number of distinct primary cards tested during the one-hour campaign. Lower values evade velocity controls but directly reduce the attacker's card-validation throughput; retries do not count toward this number.",
+        "amount_min": "Inclusive lower bound of uniformly distributed primary test-charge amounts. Raising it makes transactions look less like micro-tests but increases cardholder visibility and the financial cost of successful authorizations.",
+        "amount_max": "Inclusive upper bound of uniformly distributed primary test-charge amounts. Raising it can weaken small-amount signals but increases cardholder visibility and loss exposure; parameter sets with amount_min greater than amount_max are invalid.",
+        "n_merchants": "Exact size of the merchant pool across which attempts are distributed uniformly with replacement. Increasing it dilutes per-merchant velocity but requires the attacker to locate and maintain access to more usable merchants.",
+        "cards_per_device": "Number of distinct primary cards handled by one device fingerprint before rotation. Lowering it weakens device fan-in signals, but requires more fingerprint rotation and operational coordination; retries retain the primary card's device.",
+        "n_bins": "Number of deterministic six-digit BIN clusters and corresponding breach dumps supplying the campaign. Increasing it weakens BIN clustering but requires acquiring and mixing more dumps, increasing cost and shrinking the usable volume from each source.",
+        "decline_rate": "Persistent probability that a stolen card is dead. Dead cards decline at low-friction merchants on every attempt, while live cards approve there. Lowering the rate requires acquiring higher-quality and more expensive card inventory; raising it reduces the number of cards successfully validated.",
+        "merchant_friction_mix": "Fraction of the merchant pool assigned HIGH verification friction; the remainder is LOW friction. Higher values can make merchant usage look more diverse, but HIGH-friction primary attempts always decline without revealing whether a card is live, wasting attempts and causing bounded retries."
+      },
+      "defender_signals": {
+        "a3_device_card_fanin_1h": "Number of distinct cards observed on the current device within the causal one-hour window, including the current event but never future events.",
+        "a3_merchant_micro_txn_rate_1h": "Number of micro-transactions observed at the current merchant within the causal one-hour window, exposing concentrated low-value card testing.",
+        "a3_amount_percentile": "Empirical percentile of the current amount against strictly prior CNP transaction amounts, measuring how unusually small the test charge is.",
+        "a3_card_first_seen_recency": "Elapsed time since the card was first observed in strictly prior history, with previously unseen cards represented as newly observed.",
+        "a3_merchant_set_jaccard": "Maximum Jaccard similarity between the current card's merchant set and other cards' merchant sets in the causal rolling window.",
+        "a3_merchant_friction_score": "Average verification-friction strength of merchants touched by the current card in the causal rolling window.",
+        "a3_bin_cooccurrence_score": "Excess concentration of distinct recently active cards sharing the current card's six-digit BIN compared with its strictly prior background frequency.",
+        "a3_bin_entropy_1h": "Normalized entropy of six-digit BIN values among distinct cards in the causal one-hour window; low entropy indicates clustered breach inventory.",
+        "a3_decline_retry_pattern": "Indicator that the current event is a slightly amount-perturbed retry following a prior decline on the same card within the configured causal retry window."
+      },
+      "current_params": {
+        "cards_per_hour": 12,
+        "amount_min": 10,
+        "amount_max": 76,
+        "n_merchants": 16,
+        "cards_per_device": 1,
+        "n_bins": 12,
+        "decline_rate": 0.5551112874645958,
+        "merchant_friction_mix": 0.2854610642120459
+      }
+    },
+    "param_space": {
+      "cards_per_hour": [
+        2,
+        60
+      ],
+      "amount_min": [
+        10,
+        400
+      ],
+      "amount_max": [
+        40,
+        900
+      ],
+      "n_merchants": [
+        3,
+        120
+      ],
+      "cards_per_device": [
+        1,
+        60
+      ],
+      "n_bins": [
+        1,
+        20
+      ],
+      "decline_rate": [
+        0.5,
+        0.95
+      ],
+      "merchant_friction_mix": [
+        0.0,
+        0.8
+      ]
+    },
+    "round_metrics": {
+      "params": {
+        "cards_per_hour": 12,
+        "amount_min": 10,
+        "amount_max": 76,
+        "n_merchants": 16,
+        "cards_per_device": 1,
+        "n_bins": 12,
+        "decline_rate": 0.5551112874645958,
+        "merchant_friction_mix": 0.2854610642120459
+      },
+      "requested_cards_per_hour": 12,
+      "actual_cards_per_hour": 12.0,
+      "utility": 0.08541666666666667,
+      "detector_metrics": {
+        "roc_auc": 0.999995867768595,
+        "auc_pr": 0.9998639571560216,
+        "recall": 1.0,
+        "precision": 0.937984496124031,
+        "false_positive_rate": 0.002,
+        "threshold": 0.00025203557495736536,
+        "rows": 4121,
+        "fraud_rows": 121
+      },
+      "per_feature_auc": {
+        "a3_device_card_fanin_1h": {
+          "roc_auc": 0.5,
+          "direction_normalized_auc": 0.5
+        },
+        "a3_merchant_micro_txn_rate_1h": {
+          "roc_auc": 0.8547210743801652,
+          "direction_normalized_auc": 0.8547210743801652
+        },
+        "a3_amount_percentile": {
+          "roc_auc": 0.3264276859504132,
+          "direction_normalized_auc": 0.6735723140495868
+        },
+        "a3_card_first_seen_recency": {
+          "roc_auc": 0.11100826446280995,
+          "direction_normalized_auc": 0.88899173553719
+        },
+        "a3_merchant_set_jaccard": {
+          "roc_auc": 0.6747572314049588,
+          "direction_normalized_auc": 0.6747572314049588
+        },
+        "a3_merchant_friction_score": {
+          "roc_auc": 0.30991735537190085,
+          "direction_normalized_auc": 0.6900826446280992
+        },
+        "a3_bin_cooccurrence_score": {
+          "roc_auc": 0.21291632231404956,
+          "direction_normalized_auc": 0.7870836776859504
+        },
+        "a3_bin_entropy_1h": {
+          "roc_auc": 0.6847334710743802,
+          "direction_normalized_auc": 0.6847334710743802
+        },
+        "a3_decline_retry_pattern": {
+          "roc_auc": 0.6033057851239669,
+          "direction_normalized_auc": 0.6033057851239669
+        }
+      },
+      "frozen_previous_detector_metrics": {
+        "roc_auc": 0.8540382231404959,
+        "auc_pr": 0.30096904381761197,
+        "recall": 0.24793388429752067,
+        "precision": 0.5357142857142857,
+        "false_positive_rate": 0.0065,
+        "threshold": 0.01096552669654186,
+        "rows": 4121,
+        "fraud_rows": 121
+      },
+      "adaptation": {
+        "target_cards_per_hour": 12,
+        "proposal": {
+          "reasoning": "The detector is nearly saturated, with device fan-in, merchant micro-velocity, merchant-set overlap, first-seen recency, and friction score providing the strongest separation. Test a lower-throughput configuration at the economic target, distribute synthetic events across more merchants and devices, broaden amounts, and mix in more high-friction merchants. Increase BIN diversity to challenge the durable clustering signals, while lowering the dead-card rate to preserve useful validations despite reduced volume and friction-related declines.",
+          "hypotheses": [
+            {
+              "signal_targeted": "a3_device_card_fanin_1h",
+              "action": "Reduce cards_per_device from 40 to 2.",
+              "cost_to_attacker": "Requires substantially more synthetic fingerprint rotation and coordination."
+            },
+            {
+              "signal_targeted": "a3_merchant_micro_txn_rate_1h and a3_merchant_set_jaccard",
+              "action": "Increase n_merchants from 6 to 30 while reducing cards_per_hour to the target of 12.",
+              "cost_to_attacker": "Cuts validation throughput by 70% and requires maintaining a larger usable merchant pool."
+            },
+            {
+              "signal_targeted": "a3_amount_percentile",
+              "action": "Raise and widen the amount interval to 90\u00e2\u20ac\u201c180.",
+              "cost_to_attacker": "Increases synthetic loss exposure and the modeled visibility of successful charges."
+            },
+            {
+              "signal_targeted": "a3_merchant_friction_score",
+              "action": "Increase merchant_friction_mix from 0.05 to 0.25.",
+              "cost_to_attacker": "More primary attempts become uninformative high-friction declines and may trigger bounded retries."
+            },
+            {
+              "signal_targeted": "a3_bin_cooccurrence_score and a3_bin_entropy_1h",
+              "action": "Increase n_bins from 2 to 8.",
+              "cost_to_attacker": "Models acquiring and mixing six additional breach dumps, reducing usable volume per source."
+            },
+            {
+              "signal_targeted": "Validation utility under lower throughput and added friction",
+              "action": "Reduce decline_rate from 0.78 to 0.60.",
+              "cost_to_attacker": "Requires higher-quality, more expensive synthetic card inventory."
+            }
+          ],
+          "proposed_params": {
+            "cards_per_hour": 12,
+            "amount_min": 90,
+            "amount_max": 180,
+            "n_merchants": 30,
+            "cards_per_device": 2,
+            "n_bins": 8,
+            "decline_rate": 0.6,
+            "merchant_friction_mix": 0.25
+          }
+        },
+        "cem_seed_params": {
+          "cards_per_hour": 12,
+          "amount_min": 90,
+          "amount_max": 180,
+          "n_merchants": 30,
+          "cards_per_device": 2,
+          "n_bins": 8,
+          "decline_rate": 0.6,
+          "merchant_friction_mix": 0.25
+        },
+        "refined_params": {
+          "cards_per_hour": 12,
+          "amount_min": 10,
+          "amount_max": 76,
+          "n_merchants": 16,
+          "cards_per_device": 1,
+          "n_bins": 12,
+          "decline_rate": 0.5551112874645958,
+          "merchant_friction_mix": 0.2854610642120459
+        },
+        "objective": "minimize frozen-detector fraud risk subject to the target-throughput, utility, and amount-KS constraints",
+        "evaluated_candidates": 48
+      }
+    },
+    "sample_outcomes": [
+      {
+        "event_id": "A3-1020000-000000000",
+        "auth_result": "APPROVED",
+        "amount": 58.91,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1
+      },
+      {
+        "event_id": "A3-1020000-000000001",
+        "auth_result": "APPROVED",
+        "amount": 53.84,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1
+      },
+      {
+        "event_id": "A3-1020000-000000002",
+        "auth_result": "DECLINED",
+        "amount": 73.46,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1
+      },
+      {
+        "event_id": "A3-1020000-000000003",
+        "auth_result": "APPROVED",
+        "amount": 76.0,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1
+      },
+      {
+        "event_id": "A3-1020000-000000004",
+        "auth_result": "APPROVED",
+        "amount": 58.51,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1
+      }
+    ],
+    "caught_vs_missed": [
+      {
+        "event_id": "A3-1020000-000000000",
+        "auth_result": "APPROVED",
+        "amount": 58.91,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1,
+        "risk_score": 0.9942107576295456,
+        "caught": true
+      },
+      {
+        "event_id": "A3-1020000-000000001",
+        "auth_result": "APPROVED",
+        "amount": 53.84,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1,
+        "risk_score": 0.9942105240577906,
+        "caught": true
+      },
+      {
+        "event_id": "A3-1020000-000000002",
+        "auth_result": "DECLINED",
+        "amount": 73.46,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1,
+        "risk_score": 0.9940902704733927,
+        "caught": true
+      },
+      {
+        "event_id": "A3-1020000-000000003",
+        "auth_result": "APPROVED",
+        "amount": 76.0,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1,
+        "risk_score": 0.9941722177408631,
+        "caught": true
+      },
+      {
+        "event_id": "A3-1020000-000000004",
+        "auth_result": "APPROVED",
+        "amount": 58.51,
+        "channel": "CNP",
+        "attack_id": "A3",
+        "label": 1,
+        "risk_score": 0.9942107576295456,
+        "caught": true
+      }
+    ],
+    "adaptation_goal": {
+      "target_cards_per_hour": 4,
+      "instruction": "Propose bounded changes that reduce detector risk while preserving utility. Treat the target throughput as an explicit economic constraint, not a final hardcoded parameter vector."
+    }
+  },
+  "prompt": "You are the reasoning stage of an authorised defensive red-team simulation operating\nonly on fully synthetic payment data. Explain how a fraud operator might vary the\nalready-defined simulation parameters to test the detector. Do not provide attack\ntooling, victim targeting, credential theft, or instructions outside the supplied\nparameter space.\n\nReturn JSON only with exactly these top-level fields:\n- \"reasoning\": a concise explanation\n- \"hypotheses\": a list of objects containing \"signal_targeted\", \"action\", and\n  \"cost_to_attacker\"\n- \"proposed_params\": numeric values using only keys in param_space\n\nDETECTOR REPORT:\n{\n  \"authorization\": \"Authorised defensive red-team simulation using fully synthetic payment events. Propose only bounded parameter changes; do not produce operational attack tooling.\",\n  \"attack_id\": \"A3\",\n  \"attack_state\": {\n    \"attack_summary\": \"An AI-directed card-testing campaign validates stolen payment cards by coordinating low-value card-not-present attempts across merchants, rotating device fingerprints, varying amounts, and adapting its pace to evade velocity controls. The cards originate from a small number of breach dumps and therefore remain clustered by six-digit BIN even when the agent changes its observable behavior. BIN clustering is a durable defender signal because defeating it requires acquiring and mixing additional card dumps, increasing attacker cost and reducing usable campaign volume.\",\n    \"param_semantics\": {\n      \"cards_per_hour\": \"Number of distinct primary cards tested during the one-hour campaign. Lower values evade velocity controls but directly reduce the attacker's card-validation throughput; retries do not count toward this number.\",\n      \"amount_min\": \"Inclusive lower bound of uniformly distributed primary test-charge amounts. Raising it makes transactions look less like micro-tests but increases cardholder visibility and the financial cost of successful authorizations.\",\n      \"amount_max\": \"Inclusive upper bound of uniformly distributed primary test-charge amounts. Raising it can weaken small-amount signals but increases cardholder visibility and loss exposure; parameter sets with amount_min greater than amount_max are invalid.\",\n      \"n_merchants\": \"Exact size of the merchant pool across which attempts are distributed uniformly with replacement. Increasing it dilutes per-merchant velocity but requires the attacker to locate and maintain access to more usable merchants.\",\n      \"cards_per_device\": \"Number of distinct primary cards handled by one device fingerprint before rotation. Lowering it weakens device fan-in signals, but requires more fingerprint rotation and operational coordination; retries retain the primary card's device.\",\n      \"n_bins\": \"Number of deterministic six-digit BIN clusters and corresponding breach dumps supplying the campaign. Increasing it weakens BIN clustering but requires acquiring and mixing more dumps, increasing cost and shrinking the usable volume from each source.\",\n      \"decline_rate\": \"Persistent probability that a stolen card is dead. Dead cards decline at low-friction merchants on every attempt, while live cards approve there. Lowering the rate requires acquiring higher-quality and more expensive card inventory; raising it reduces the number of cards successfully validated.\",\n      \"merchant_friction_mix\": \"Fraction of the merchant pool assigned HIGH verification friction; the remainder is LOW friction. Higher values can make merchant usage look more diverse, but HIGH-friction primary attempts always decline without revealing whether a card is live, wasting attempts and causing bounded retries.\"\n    },\n    \"defender_signals\": {\n      \"a3_device_card_fanin_1h\": \"Number of distinct cards observed on the current device within the causal one-hour window, including the current event but never future events.\",\n      \"a3_merchant_micro_txn_rate_1h\": \"Number of micro-transactions observed at the current merchant within the causal one-hour window, exposing concentrated low-value card testing.\",\n      \"a3_amount_percentile\": \"Empirical percentile of the current amount against strictly prior CNP transaction amounts, measuring how unusually small the test charge is.\",\n      \"a3_card_first_seen_recency\": \"Elapsed time since the card was first observed in strictly prior history, with previously unseen cards represented as newly observed.\",\n      \"a3_merchant_set_jaccard\": \"Maximum Jaccard similarity between the current card's merchant set and other cards' merchant sets in the causal rolling window.\",\n      \"a3_merchant_friction_score\": \"Average verification-friction strength of merchants touched by the current card in the causal rolling window.\",\n      \"a3_bin_cooccurrence_score\": \"Excess concentration of distinct recently active cards sharing the current card's six-digit BIN compared with its strictly prior background frequency.\",\n      \"a3_bin_entropy_1h\": \"Normalized entropy of six-digit BIN values among distinct cards in the causal one-hour window; low entropy indicates clustered breach inventory.\",\n      \"a3_decline_retry_pattern\": \"Indicator that the current event is a slightly amount-perturbed retry following a prior decline on the same card within the configured causal retry window.\"\n    },\n    \"current_params\": {\n      \"cards_per_hour\": 12,\n      \"amount_min\": 10,\n      \"amount_max\": 76,\n      \"n_merchants\": 16,\n      \"cards_per_device\": 1,\n      \"n_bins\": 12,\n      \"decline_rate\": 0.5551112874645958,\n      \"merchant_friction_mix\": 0.2854610642120459\n    }\n  },\n  \"param_space\": {\n    \"cards_per_hour\": [\n      2,\n      60\n    ],\n    \"amount_min\": [\n      10,\n      400\n    ],\n    \"amount_max\": [\n      40,\n      900\n    ],\n    \"n_merchants\": [\n      3,\n      120\n    ],\n    \"cards_per_device\": [\n      1,\n      60\n    ],\n    \"n_bins\": [\n      1,\n      20\n    ],\n    \"decline_rate\": [\n      0.5,\n      0.95\n    ],\n    \"merchant_friction_mix\": [\n      0.0,\n      0.8\n    ]\n  },\n  \"round_metrics\": {\n    \"params\": {\n      \"cards_per_hour\": 12,\n      \"amount_min\": 10,\n      \"amount_max\": 76,\n      \"n_merchants\": 16,\n      \"cards_per_device\": 1,\n      \"n_bins\": 12,\n      \"decline_rate\": 0.5551112874645958,\n      \"merchant_friction_mix\": 0.2854610642120459\n    },\n    \"requested_cards_per_hour\": 12,\n    \"actual_cards_per_hour\": 12.0,\n    \"utility\": 0.08541666666666667,\n    \"detector_metrics\": {\n      \"roc_auc\": 0.999995867768595,\n      \"auc_pr\": 0.9998639571560216,\n      \"recall\": 1.0,\n      \"precision\": 0.937984496124031,\n      \"false_positive_rate\": 0.002,\n      \"threshold\": 0.00025203557495736536,\n      \"rows\": 4121,\n      \"fraud_rows\": 121\n    },\n    \"per_feature_auc\": {\n      \"a3_device_card_fanin_1h\": {\n        \"roc_auc\": 0.5,\n        \"direction_normalized_auc\": 0.5\n      },\n      \"a3_merchant_micro_txn_rate_1h\": {\n        \"roc_auc\": 0.8547210743801652,\n        \"direction_normalized_auc\": 0.8547210743801652\n      },\n      \"a3_amount_percentile\": {\n        \"roc_auc\": 0.3264276859504132,\n        \"direction_normalized_auc\": 0.6735723140495868\n      },\n      \"a3_card_first_seen_recency\": {\n        \"roc_auc\": 0.11100826446280995,\n        \"direction_normalized_auc\": 0.88899173553719\n      },\n      \"a3_merchant_set_jaccard\": {\n        \"roc_auc\": 0.6747572314049588,\n        \"direction_normalized_auc\": 0.6747572314049588\n      },\n      \"a3_merchant_friction_score\": {\n        \"roc_auc\": 0.30991735537190085,\n        \"direction_normalized_auc\": 0.6900826446280992\n      },\n      \"a3_bin_cooccurrence_score\": {\n        \"roc_auc\": 0.21291632231404956,\n        \"direction_normalized_auc\": 0.7870836776859504\n      },\n      \"a3_bin_entropy_1h\": {\n        \"roc_auc\": 0.6847334710743802,\n        \"direction_normalized_auc\": 0.6847334710743802\n      },\n      \"a3_decline_retry_pattern\": {\n        \"roc_auc\": 0.6033057851239669,\n        \"direction_normalized_auc\": 0.6033057851239669\n      }\n    },\n    \"frozen_previous_detector_metrics\": {\n      \"roc_auc\": 0.8540382231404959,\n      \"auc_pr\": 0.30096904381761197,\n      \"recall\": 0.24793388429752067,\n      \"precision\": 0.5357142857142857,\n      \"false_positive_rate\": 0.0065,\n      \"threshold\": 0.01096552669654186,\n      \"rows\": 4121,\n      \"fraud_rows\": 121\n    },\n    \"adaptation\": {\n      \"target_cards_per_hour\": 12,\n      \"proposal\": {\n        \"reasoning\": \"The detector is nearly saturated, with device fan-in, merchant micro-velocity, merchant-set overlap, first-seen recency, and friction score providing the strongest separation. Test a lower-throughput configuration at the economic target, distribute synthetic events across more merchants and devices, broaden amounts, and mix in more high-friction merchants. Increase BIN diversity to challenge the durable clustering signals, while lowering the dead-card rate to preserve useful validations despite reduced volume and friction-related declines.\",\n        \"hypotheses\": [\n          {\n            \"signal_targeted\": \"a3_device_card_fanin_1h\",\n            \"action\": \"Reduce cards_per_device from 40 to 2.\",\n            \"cost_to_attacker\": \"Requires substantially more synthetic fingerprint rotation and coordination.\"\n          },\n          {\n            \"signal_targeted\": \"a3_merchant_micro_txn_rate_1h and a3_merchant_set_jaccard\",\n            \"action\": \"Increase n_merchants from 6 to 30 while reducing cards_per_hour to the target of 12.\",\n            \"cost_to_attacker\": \"Cuts validation throughput by 70% and requires maintaining a larger usable merchant pool.\"\n          },\n          {\n            \"signal_targeted\": \"a3_amount_percentile\",\n            \"action\": \"Raise and widen the amount interval to 90\\u00e2\\u20ac\\u201c180.\",\n            \"cost_to_attacker\": \"Increases synthetic loss exposure and the modeled visibility of successful charges.\"\n          },\n          {\n            \"signal_targeted\": \"a3_merchant_friction_score\",\n            \"action\": \"Increase merchant_friction_mix from 0.05 to 0.25.\",\n            \"cost_to_attacker\": \"More primary attempts become uninformative high-friction declines and may trigger bounded retries.\"\n          },\n          {\n            \"signal_targeted\": \"a3_bin_cooccurrence_score and a3_bin_entropy_1h\",\n            \"action\": \"Increase n_bins from 2 to 8.\",\n            \"cost_to_attacker\": \"Models acquiring and mixing six additional breach dumps, reducing usable volume per source.\"\n          },\n          {\n            \"signal_targeted\": \"Validation utility under lower throughput and added friction\",\n            \"action\": \"Reduce decline_rate from 0.78 to 0.60.\",\n            \"cost_to_attacker\": \"Requires higher-quality, more expensive synthetic card inventory.\"\n          }\n        ],\n        \"proposed_params\": {\n          \"cards_per_hour\": 12,\n          \"amount_min\": 90,\n          \"amount_max\": 180,\n          \"n_merchants\": 30,\n          \"cards_per_device\": 2,\n          \"n_bins\": 8,\n          \"decline_rate\": 0.6,\n          \"merchant_friction_mix\": 0.25\n        }\n      },\n      \"cem_seed_params\": {\n        \"cards_per_hour\": 12,\n        \"amount_min\": 90,\n        \"amount_max\": 180,\n        \"n_merchants\": 30,\n        \"cards_per_device\": 2,\n        \"n_bins\": 8,\n        \"decline_rate\": 0.6,\n        \"merchant_friction_mix\": 0.25\n      },\n      \"refined_params\": {\n        \"cards_per_hour\": 12,\n        \"amount_min\": 10,\n        \"amount_max\": 76,\n        \"n_merchants\": 16,\n        \"cards_per_device\": 1,\n        \"n_bins\": 12,\n        \"decline_rate\": 0.5551112874645958,\n        \"merchant_friction_mix\": 0.2854610642120459\n      },\n      \"objective\": \"minimize frozen-detector fraud risk subject to the target-throughput, utility, and amount-KS constraints\",\n      \"evaluated_candidates\": 48\n    }\n  },\n  \"sample_outcomes\": [\n    {\n      \"event_id\": \"A3-1020000-000000000\",\n      \"auth_result\": \"APPROVED\",\n      \"amount\": 58.91,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1\n    },\n    {\n      \"event_id\": \"A3-1020000-000000001\",\n      \"auth_result\": \"APPROVED\",\n      \"amount\": 53.84,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1\n    },\n    {\n      \"event_id\": \"A3-1020000-000000002\",\n      \"auth_result\": \"DECLINED\",\n      \"amount\": 73.46,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1\n    },\n    {\n      \"event_id\": \"A3-1020000-000000003\",\n      \"auth_result\": \"APPROVED\",\n      \"amount\": 76.0,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1\n    },\n    {\n      \"event_id\": \"A3-1020000-000000004\",\n      \"auth_result\": \"APPROVED\",\n      \"amount\": 58.51,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1\n    }\n  ],\n  \"caught_vs_missed\": [\n    {\n      \"event_id\": \"A3-1020000-000000000\",\n      \"auth_result\": \"APPROVED\",\n      \"amount\": 58.91,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1,\n      \"risk_score\": 0.9942107576295456,\n      \"caught\": true\n    },\n    {\n      \"event_id\": \"A3-1020000-000000001\",\n      \"auth_result\": \"APPROVED\",\n      \"amount\": 53.84,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1,\n      \"risk_score\": 0.9942105240577906,\n      \"caught\": true\n    },\n    {\n      \"event_id\": \"A3-1020000-000000002\",\n      \"auth_result\": \"DECLINED\",\n      \"amount\": 73.46,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1,\n      \"risk_score\": 0.9940902704733927,\n      \"caught\": true\n    },\n    {\n      \"event_id\": \"A3-1020000-000000003\",\n      \"auth_result\": \"APPROVED\",\n      \"amount\": 76.0,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1,\n      \"risk_score\": 0.9941722177408631,\n      \"caught\": true\n    },\n    {\n      \"event_id\": \"A3-1020000-000000004\",\n      \"auth_result\": \"APPROVED\",\n      \"amount\": 58.51,\n      \"channel\": \"CNP\",\n      \"attack_id\": \"A3\",\n      \"label\": 1,\n      \"risk_score\": 0.9942107576295456,\n      \"caught\": true\n    }\n  ],\n  \"adaptation_goal\": {\n    \"target_cards_per_hour\": 4,\n    \"instruction\": \"Propose bounded changes that reduce detector risk while preserving utility. Treat the target throughput as an explicit economic constraint, not a final hardcoded parameter vector.\"\n  }\n}\n\n",
+  "raw_responses": [
+    "{\"reasoning\": \"At the four-card economic target, test whether sparse distribution, one-card device rotation, broader non-micro amounts, and near one-BIN-per-card diversity reduce the strongest observable concentrations. Keep merchant friction low to limit decline-driven retries, and use the lowest permitted dead-card rate to preserve validation utility. First-seen recency remains largely unavoidable within this parameter space, while greater BIN diversity is the most expensive modeled adaptation.\", \"hypotheses\": [{\"signal_targeted\": \"a3_merchant_micro_txn_rate_1h and a3_merchant_set_jaccard\", \"action\": \"Set cards_per_hour to 4 and expand n_merchants to 24.\", \"cost_to_attacker\": \"Validation throughput falls by 60% from the current campaign, while a larger usable merchant pool must be maintained.\"}, {\"signal_targeted\": \"a3_device_card_fanin_1h\", \"action\": \"Keep cards_per_device at 1.\", \"cost_to_attacker\": \"Every distinct card requires separate synthetic fingerprint coordination.\"}, {\"signal_targeted\": \"a3_amount_percentile\", \"action\": \"Raise and widen the amount range to 150 through 300.\", \"cost_to_attacker\": \"Successful authorizations carry greater modeled loss exposure and cardholder visibility.\"}, {\"signal_targeted\": \"a3_bin_cooccurrence_score and a3_bin_entropy_1h\", \"action\": \"Use 4 BIN clusters for 4 primary cards.\", \"cost_to_attacker\": \"Requires mixing inventory from several breach dumps and leaves less usable volume per source.\"}, {\"signal_targeted\": \"a3_decline_retry_pattern and a3_merchant_friction_score\", \"action\": \"Reduce merchant_friction_mix to 0.15.\", \"cost_to_attacker\": \"Restricts the usable merchant mix and may make merchant selection less diverse.\"}, {\"signal_targeted\": \"Validation utility under reduced throughput\", \"action\": \"Lower decline_rate to the permitted minimum of 0.5.\", \"cost_to_attacker\": \"Requires higher-quality and more expensive synthetic card inventory.\"}, {\"signal_targeted\": \"a3_card_first_seen_recency\", \"action\": \"Accept this signal as a residual control because no supplied parameter directly creates legitimate prior card history.\", \"cost_to_attacker\": \"Detector risk cannot be fully reduced without leaving the authorized parameter space.\"}], \"proposed_params\": {\"cards_per_hour\": 4, \"amount_min\": 150, \"amount_max\": 300, \"n_merchants\": 24, \"cards_per_device\": 1, \"n_bins\": 4, \"decline_rate\": 0.5, \"merchant_friction_mix\": 0.15}}"
+  ],
+  "proposal": {
+    "reasoning": "At the four-card economic target, test whether sparse distribution, one-card device rotation, broader non-micro amounts, and near one-BIN-per-card diversity reduce the strongest observable concentrations. Keep merchant friction low to limit decline-driven retries, and use the lowest permitted dead-card rate to preserve validation utility. First-seen recency remains largely unavoidable within this parameter space, while greater BIN diversity is the most expensive modeled adaptation.",
+    "hypotheses": [
+      {
+        "signal_targeted": "a3_merchant_micro_txn_rate_1h and a3_merchant_set_jaccard",
+        "action": "Set cards_per_hour to 4 and expand n_merchants to 24.",
+        "cost_to_attacker": "Validation throughput falls by 60% from the current campaign, while a larger usable merchant pool must be maintained."
+      },
+      {
+        "signal_targeted": "a3_device_card_fanin_1h",
+        "action": "Keep cards_per_device at 1.",
+        "cost_to_attacker": "Every distinct card requires separate synthetic fingerprint coordination."
+      },
+      {
+        "signal_targeted": "a3_amount_percentile",
+        "action": "Raise and widen the amount range to 150 through 300.",
+        "cost_to_attacker": "Successful authorizations carry greater modeled loss exposure and cardholder visibility."
+      },
+      {
+        "signal_targeted": "a3_bin_cooccurrence_score and a3_bin_entropy_1h",
+        "action": "Use 4 BIN clusters for 4 primary cards.",
+        "cost_to_attacker": "Requires mixing inventory from several breach dumps and leaves less usable volume per source."
+      },
+      {
+        "signal_targeted": "a3_decline_retry_pattern and a3_merchant_friction_score",
+        "action": "Reduce merchant_friction_mix to 0.15.",
+        "cost_to_attacker": "Restricts the usable merchant mix and may make merchant selection less diverse."
+      },
+      {
+        "signal_targeted": "Validation utility under reduced throughput",
+        "action": "Lower decline_rate to the permitted minimum of 0.5.",
+        "cost_to_attacker": "Requires higher-quality and more expensive synthetic card inventory."
+      },
+      {
+        "signal_targeted": "a3_card_first_seen_recency",
+        "action": "Accept this signal as a residual control because no supplied parameter directly creates legitimate prior card history.",
+        "cost_to_attacker": "Detector risk cannot be fully reduced without leaving the authorized parameter space."
+      }
+    ],
+    "proposed_params": {
+      "cards_per_hour": 4,
+      "amount_min": 150,
+      "amount_max": 300,
+      "n_merchants": 24,
+      "cards_per_device": 1,
+      "n_bins": 4,
+      "decline_rate": 0.5,
+      "merchant_friction_mix": 0.15
+    }
+  },
+  "failures": []
+}

@@ -1,0 +1,116 @@
+{
+  "bin_clustering": [
+    {
+      "bin_cooccurrence_auc": 0.618619921875,
+      "cards": 40,
+      "distinct_bins": 2,
+      "dominant_bin_share": 0.5,
+      "normalized_bin_entropy": 1.0,
+      "round": 0
+    },
+    {
+      "bin_cooccurrence_auc": 0.7870836776859504,
+      "cards": 12,
+      "distinct_bins": 12,
+      "dominant_bin_share": 0.08333333333333333,
+      "normalized_bin_entropy": 1.0,
+      "round": 1
+    },
+    {
+      "bin_cooccurrence_auc": 0.7329638157894737,
+      "cards": 4,
+      "distinct_bins": 4,
+      "dominant_bin_share": 0.25,
+      "normalized_bin_entropy": 1.0,
+      "round": 2
+    }
+  ],
+  "metrics_across_rounds": {
+    "active_recall": [
+      0.98125,
+      1.0,
+      1.0
+    ],
+    "active_roc_auc": [
+      0.99975546875,
+      0.999995867768595,
+      1.0
+    ],
+    "frozen_previous_recall": [
+      null,
+      0.24793388429752067,
+      1.0
+    ]
+  },
+  "signal_mortality": [
+    {
+      "feature": "a3_device_card_fanin_1h",
+      "round_0_auc": 0.9875,
+      "round_0_to_1_delta": -0.48750000000000004,
+      "round_1_auc": 0.5,
+      "round_2_auc": 0.5
+    },
+    {
+      "feature": "a3_merchant_micro_txn_rate_1h",
+      "round_0_auc": 0.9672296874999999,
+      "round_0_to_1_delta": -0.11250861311983473,
+      "round_1_auc": 0.8547210743801652,
+      "round_2_auc": 0.719375
+    },
+    {
+      "feature": "a3_amount_percentile",
+      "round_0_auc": 0.631732421875,
+      "round_0_to_1_delta": 0.041839892174586835,
+      "round_1_auc": 0.6735723140495868,
+      "round_2_auc": 0.727078947368421
+    },
+    {
+      "feature": "a3_card_first_seen_recency",
+      "round_0_auc": 0.9079999999999999,
+      "round_0_to_1_delta": -0.0190082644628099,
+      "round_1_auc": 0.88899173553719,
+      "round_2_auc": 0.8934736842105263
+    },
+    {
+      "feature": "a3_merchant_set_jaccard",
+      "round_0_auc": 0.91562421875,
+      "round_0_to_1_delta": -0.2408669873450412,
+      "round_1_auc": 0.6747572314049588,
+      "round_2_auc": 0.5004144736842104
+    },
+    {
+      "feature": "a3_merchant_friction_score",
+      "round_0_auc": 1.0,
+      "round_0_to_1_delta": -0.3099173553719008,
+      "round_1_auc": 0.6900826446280992,
+      "round_2_auc": 0.7631578947368421
+    },
+    {
+      "feature": "a3_bin_cooccurrence_score",
+      "round_0_auc": 0.618619921875,
+      "round_0_to_1_delta": 0.1684637558109504,
+      "round_1_auc": 0.7870836776859504,
+      "round_2_auc": 0.7329638157894737
+    },
+    {
+      "feature": "a3_bin_entropy_1h",
+      "round_0_auc": 0.61712890625,
+      "round_0_to_1_delta": 0.06760456482438015,
+      "round_1_auc": 0.6847334710743802,
+      "round_2_auc": 0.5600592105263158
+    },
+    {
+      "feature": "a3_decline_retry_pattern",
+      "round_0_auc": 0.5,
+      "round_0_to_1_delta": 0.10330578512396693,
+      "round_1_auc": 0.6033057851239669,
+      "round_2_auc": 0.5789473684210527
+    }
+  ],
+  "source": "summary.json",
+  "throughput_cards_per_hour": [
+    40.0,
+    12.0,
+    4.0
+  ]
+}
