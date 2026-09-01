@@ -17,7 +17,9 @@ dependencies = [
 include = ["core*", "attacks*", "redteam*", "models*", "eval*", "loop*", "app*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+# "attacks" is included so each attack package's own tests run in the default suite.
+# Without it a regression guard living beside its attack never executes.
+testpaths = ["tests", "attacks"]
 addopts = "-ra"
 
 [tool.ruff]
