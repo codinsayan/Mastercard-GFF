@@ -5,6 +5,7 @@ __pycache__/
 pytest-cache-files-*/
 .ruff_cache/
 .coverage
+streamlit_run.log
 data/raw/
 data/processed/*
 results/round_*/

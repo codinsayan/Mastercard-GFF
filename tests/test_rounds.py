@@ -40,4 +40,3 @@ def test_round_zero_writes_frozen_output_contract(tmp_path):
 def test_round_sequence_must_be_unique_contiguous_and_start_at_zero(tmp_path, rounds):
     with pytest.raises(ValueError, match="rounds"):
         run_rounds(rounds=rounds, results_root=tmp_path, population_events=50)
-

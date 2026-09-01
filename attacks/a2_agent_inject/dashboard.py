@@ -426,7 +426,7 @@ with tab_replay:
             message = "The injected product breaks semantic alignment. The round-0 detector catches it."
             css = "notice danger"
         elif scenario == "Round 1 · semantic evasion":
-            message = "Meaning now looks legitimate. The old semantic detector collapses; price and provenance remain." 
+            message = "Meaning now looks legitimate. The old semantic detector collapses; price and provenance remain."
             css = "notice danger"
         else:
             message = "The attacker suppresses price and provenance evidence, but utility falls by 94.9%."

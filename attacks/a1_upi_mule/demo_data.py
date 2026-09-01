@@ -294,22 +294,31 @@ def render_graph_svg(graph: GraphViewModel, active_edges: int, width: int = 960)
 
     header_x = nodes.groupby("role")["x"].first()
     parts: list[str] = [
-        f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
-        'xmlns="http://www.w3.org/2000/svg" font-family="system-ui,-apple-system,Segoe UI,sans-serif">',
-        "<defs>"
-        '<marker id="arrowActive" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
-        'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#EF4B39"/></marker>'
-        '<marker id="arrowIdle" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" '
-        'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#CBD2DC"/></marker>'
-        "</defs>",
-        "<style>"
-        ".node-label{font-size:11px;fill:#475467;font-weight:600}"
-        ".lane-label{font-size:11.5px;fill:#667085;font-weight:700;letter-spacing:.04em;"
-        "text-transform:uppercase}"
-        ".amt-label{font-size:11.5px;fill:#0B1220;font-weight:700}"
-        "@keyframes pulseRing{0%{r:15;opacity:.55}100%{r:30;opacity:0}}"
-        ".pulse{animation:pulseRing 1.6s ease-out infinite;fill:none;stroke:#EF4B39;stroke-width:2}"
-        "</style>",
+        (
+            f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+            'xmlns="http://www.w3.org/2000/svg" '
+            'font-family="system-ui,-apple-system,Segoe UI,sans-serif">'
+        ),
+        (
+            "<defs>"
+            '<marker id="arrowActive" viewBox="0 0 10 10" refX="9" refY="5" '
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
+            '<path d="M0,0 L10,5 L0,10 z" fill="#EF4B39"/></marker>'
+            '<marker id="arrowIdle" viewBox="0 0 10 10" refX="9" refY="5" '
+            'markerWidth="6" markerHeight="6" orient="auto-start-reverse">'
+            '<path d="M0,0 L10,5 L0,10 z" fill="#CBD2DC"/></marker>'
+            "</defs>"
+        ),
+        (
+            "<style>"
+            ".node-label{font-size:11px;fill:#475467;font-weight:600}"
+            ".lane-label{font-size:11.5px;fill:#667085;font-weight:700;letter-spacing:.04em;"
+            "text-transform:uppercase}"
+            ".amt-label{font-size:11.5px;fill:#0B1220;font-weight:700}"
+            "@keyframes pulseRing{0%{r:15;opacity:.55}100%{r:30;opacity:0}}"
+            ".pulse{animation:pulseRing 1.6s ease-out infinite;fill:none;stroke:#EF4B39;"
+            "stroke-width:2}</style>"
+        ),
     ]
 
     for role, lane_x in header_x.items():
