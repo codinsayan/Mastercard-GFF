@@ -18,7 +18,25 @@
     },
     "proposed_params": {
       "type": "object",
-      "additionalProperties": {"type": "number"}
+      "properties": {
+        "n_victims": {"type": "integer", "minimum": 20, "maximum": 2000},
+        "mule_age_days": {"type": "integer", "minimum": 1, "maximum": 120},
+        "split_factor": {"type": "integer", "minimum": 2, "maximum": 25},
+        "dwell_time_hours": {"type": "number", "minimum": 0.05, "maximum": 48.0},
+        "amount_multiplier_vs_baseline": {"type": "number", "minimum": 2.0, "maximum": 15.0},
+        "n_cashout_points": {"type": "integer", "minimum": 3, "maximum": 60},
+        "n_mules_layer1": {"type": "integer", "minimum": 20, "maximum": 400}
+      },
+      "required": [
+        "n_victims",
+        "mule_age_days",
+        "split_factor",
+        "dwell_time_hours",
+        "amount_multiplier_vs_baseline",
+        "n_cashout_points",
+        "n_mules_layer1"
+      ],
+      "additionalProperties": false
     }
   },
   "required": ["reasoning", "hypotheses", "proposed_params"],

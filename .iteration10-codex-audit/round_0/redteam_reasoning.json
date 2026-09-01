@@ -1,0 +1,24 @@
+{
+  "runner": {
+    "runner": "round_zero",
+    "model": "none"
+  },
+  "fallback_used": false,
+  "report": {},
+  "prompt": "",
+  "raw_responses": [],
+  "proposal": {
+    "reasoning": "Round 0 uses the attack's frozen default parameters.",
+    "hypotheses": [],
+    "proposed_params": {
+      "n_victims": 20,
+      "mule_age_days": 2,
+      "split_factor": 3,
+      "dwell_time_hours": 0.2,
+      "amount_multiplier_vs_baseline": 8.0,
+      "n_cashout_points": 5,
+      "n_mules_layer1": 60
+    }
+  },
+  "failures": []
+}

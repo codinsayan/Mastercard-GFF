@@ -2,7 +2,12 @@
 
 import streamlit as st
 
-st.set_page_config(page_title="Mastercard GFF Fraud Arena", layout="wide")
-st.title("Adaptive Fraud Arena")
-st.info("Dashboard data appears after the attack rounds are precomputed.")
+from attacks.a1_upi_mule.demo import render_a1_demo
 
+st.set_page_config(
+    page_title="A1 · Adaptive Fraud Arena",
+    page_icon="◈",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+render_a1_demo(results_root="results")

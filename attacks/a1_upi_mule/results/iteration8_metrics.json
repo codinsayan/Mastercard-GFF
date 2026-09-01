@@ -1,0 +1,124 @@
+{
+  "methodology": {
+    "population_events": 6000,
+    "reference": "development fixture; replace with Sparkov/IEEE-CIS for final fidelity claims",
+    "fixture_corrections": [
+      "legitimate first-time UPI payees receive deterministic payee-addition history",
+      "legitimate UPI beneficiary ages use a new/established/old mixture"
+    ],
+    "campaign_seeds": {
+      "default_train": 101,
+      "default_test": 102,
+      "adapted_train": 201,
+      "adapted_test": 202
+    },
+    "legitimate_split": "earliest 70% train, latest 30% test",
+    "feature_latency": "graph and dissipation features are delayed monitoring signals"
+  },
+  "params": {
+    "round_0": {
+      "n_victims": 20,
+      "mule_age_days": 2,
+      "split_factor": 3,
+      "dwell_time_hours": 0.2,
+      "amount_multiplier_vs_baseline": 8.0,
+      "n_cashout_points": 5,
+      "n_mules_layer1": 60
+    },
+    "adapted": {
+      "n_victims": 20,
+      "mule_age_days": 45,
+      "split_factor": 15,
+      "dwell_time_hours": 6.0,
+      "amount_multiplier_vs_baseline": 8.0,
+      "n_cashout_points": 20,
+      "n_mules_layer1": 120
+    }
+  },
+  "experiments": {
+    "round_0": {
+      "precision": 0.9939024390243902,
+      "recall": 1.0,
+      "f1": 0.9969418960244648,
+      "auc_pr": 0.9999999999999997,
+      "roc_auc": 1.0,
+      "recall_at_fpr_0.001": 1.0,
+      "fpr_at_recall_0.85": 0.0,
+      "threshold": 0.0490775234142224,
+      "rows": 1963,
+      "fraud_rows": 163
+    },
+    "adapted_frozen_detector": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "auc_pr": 0.4064867421660784,
+      "roc_auc": 0.6419314641744548,
+      "recall_at_fpr_0.001": 0.0,
+      "fpr_at_recall_0.85": 0.9838888888888889,
+      "threshold": 0.0490775234142224,
+      "rows": 2442,
+      "fraud_rows": 642
+    },
+    "adapted_retrained_old_features": {
+      "precision": 0.9953488372093023,
+      "recall": 1.0,
+      "f1": 0.9976689976689976,
+      "auc_pr": 0.9999830315034792,
+      "roc_auc": 0.9999939425406715,
+      "recall_at_fpr_0.001": 0.9953271028037384,
+      "fpr_at_recall_0.85": 0.0,
+      "threshold": 0.05403088159028776,
+      "rows": 2442,
+      "fraud_rows": 642
+    },
+    "adapted_durable_features": {
+      "precision": 0.9938080495356038,
+      "recall": 1.0,
+      "f1": 0.9968944099378882,
+      "auc_pr": 1.0,
+      "roc_auc": 1.0,
+      "recall_at_fpr_0.001": 1.0,
+      "fpr_at_recall_0.85": 0.0,
+      "threshold": 0.003310450761504607,
+      "rows": 2442,
+      "fraud_rows": 642
+    }
+  },
+  "signal_auc": {
+    "round_0": {
+      "a1_benef_account_age_days": 0.9891462167689162,
+      "a1_benef_fanin_24h": 0.7249573960463531,
+      "a1_dissipation_ratio": 0.8159509202453987,
+      "a1_payer_amount_zscore": 0.6921387184730743,
+      "a1_payee_added_to_transfer_seconds": 0.5122222222222222
+    },
+    "adapted": {
+      "a1_benef_account_age_days": 0.9622222222222222,
+      "a1_benef_fanin_24h": 0.7229447905849774,
+      "a1_dissipation_ratio": 0.7336448598130841,
+      "a1_payer_amount_zscore": 0.6116766182069922,
+      "a1_payee_added_to_transfer_seconds": 0.5122222222222222,
+      "a1_component_size": 1.0,
+      "a1_component_dissipation": 0.7492540671512633,
+      "a1_cashout_convergence": 1.0,
+      "a1_component_age_variance": 0.9458670820353063,
+      "a1_call_active": 0.5327102803738317,
+      "a1_session_duration_anomaly": 0.6950947559709242
+    }
+  },
+  "infrastructure": {
+    "round_0": {
+      "mules": 80,
+      "cashout_points": 5,
+      "cashout_value": 63928.25,
+      "utility": 0.19386203011822425
+    },
+    "adapted": {
+      "mules": 320,
+      "cashout_points": 20,
+      "cashout_value": 65968.07,
+      "utility": 0.046588670604698026
+    }
+  }
+}
